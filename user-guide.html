@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Aquarium Controller — User Guide</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root {
+      --bg: #05070b;
+      --card: #0c111a;
+      --card2: #111827;
+      --accent: #1e88ff;
+      --cyan: #00c9d8;
+      --yellow: #ffb300;
+      --green: #00c853;
+      --red: #ef5350;
+      --purple: #7c4dff;
+      --text: #e8edf5;
+      --sub: #a9b4c8;
+      --border: rgba(255,255,255,0.07);
+      --radius: 14px;
+      --shadow: 0 8px 24px rgba(0,0,0,0.5);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: #05070b;
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Roboto", sans-serif;
+      font-size: 15px;
+      line-height: 1.65;
+    }
+
+    /* ── LAYOUT ── */
+    .page { max-width: 820px; margin: 0 auto; padding: 40px 24px 80px; }
+
+    /* ── COVER ── */
+    .cover {
+      text-align: center;
+      padding: 56px 24px 48px;
+      background: radial-gradient(ellipse at top, #0d1e3a 0%, #05070b 60%);
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 48px;
+    }
+    .cover-icon { font-size: 52px; margin-bottom: 16px; }
+    .cover h1 {
+      font-size: 32px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      background: linear-gradient(135deg, #fff 30%, var(--cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 8px;
+    }
+    .cover .subtitle {
+      font-size: 13px;
+      color: var(--sub);
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+    }
+    .cover .version {
+      display: inline-block;
+      margin-top: 16px;
+      font-size: 11px;
+      padding: 4px 12px;
+      border-radius: 999px;
+      background: rgba(0,201,216,0.1);
+      color: var(--cyan);
+      letter-spacing: 0.12em;
+    }
+
+    /* ── TOC ── */
+    .toc {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 24px 28px;
+      margin-bottom: 48px;
+      border: 1px solid var(--border);
+    }
+    .toc h2 {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      color: var(--sub);
+      margin-bottom: 16px;
+    }
+    .toc ol { padding-left: 20px; }
+    .toc li { margin-bottom: 6px; }
+    .toc a { color: var(--accent); text-decoration: none; font-size: 14px; }
+    .toc a:hover { color: var(--cyan); }
+    .toc ol ol { margin-top: 4px; }
+    .toc ol ol li { margin-bottom: 3px; }
+    .toc ol ol a { color: var(--sub); font-size: 13px; }
+
+    /* ── SECTION ── */
+    .section {
+      margin-bottom: 52px;
+      scroll-margin-top: 24px;
+    }
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .section-num {
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--accent), #0f4c81);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 700;
+      flex-shrink: 0;
+      box-shadow: 0 0 14px rgba(30,136,255,0.4);
+    }
+    .section-header h2 {
+      font-size: 20px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+    }
+
+    h3 {
+      font-size: 15px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--cyan);
+      margin: 28px 0 12px;
+    }
+    h4 {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--sub);
+      margin: 20px 0 8px;
+    }
+
+    p { margin-bottom: 12px; color: var(--text); }
+    p:last-child { margin-bottom: 0; }
+
+    /* ── CALLOUTS ── */
+    .callout {
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin: 16px 0;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      font-size: 14px;
+    }
+    .callout-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+    .callout-body { flex: 1; }
+    .callout-body strong { display: block; margin-bottom: 4px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; }
+    .callout.info    { background: rgba(30,136,255,0.1);  border-left: 3px solid var(--accent); }
+    .callout.tip     { background: rgba(0,201,216,0.08);  border-left: 3px solid var(--cyan); }
+    .callout.warn    { background: rgba(255,179,0,0.1);   border-left: 3px solid var(--yellow); }
+    .callout.success { background: rgba(0,200,83,0.08);   border-left: 3px solid var(--green); }
+
+    /* ── CODE ── */
+    code {
+      font-family: "SF Mono", "Fira Code", "Consolas", monospace;
+      font-size: 13px;
+      background: rgba(255,255,255,0.06);
+      padding: 2px 6px;
+      border-radius: 5px;
+      color: var(--cyan);
+    }
+    pre {
+      background: var(--card2);
+      border-radius: 10px;
+      padding: 16px 18px;
+      margin: 14px 0;
+      overflow-x: auto;
+      border: 1px solid var(--border);
+    }
+    pre code {
+      background: none;
+      padding: 0;
+      font-size: 13px;
+      color: #c8d8f0;
+    }
+
+    /* ── STEPS ── */
+    .steps { counter-reset: step; margin: 16px 0; }
+    .step {
+      display: flex;
+      gap: 14px;
+      margin-bottom: 16px;
+      align-items: flex-start;
+    }
+    .step-num {
+      counter-increment: step;
+      width: 26px;
+      height: 26px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #0c2540, #0c3058);
+      color: var(--cyan);
+      font-size: 12px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .step-body { flex: 1; font-size: 14px; }
+    .step-body strong { color: #fff; }
+
+    /* ── TABLE ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+      margin: 16px 0;
+    }
+    th {
+      text-align: left;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--sub);
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 10px 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      vertical-align: top;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+
+    /* ── BADGE ── */
+    .badge {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      padding: 2px 8px;
+      border-radius: 999px;
+    }
+    .badge.required { background: rgba(239,83,80,0.15); color: var(--red); }
+    .badge.optional { background: rgba(0,201,216,0.12); color: var(--cyan); }
+    .badge.ha       { background: rgba(30,136,255,0.15); color: var(--accent); }
+
+    /* ── ENTITY LIST ── */
+    .entity-list { margin: 12px 0; }
+    .entity-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      font-size: 14px;
+    }
+    .entity-item:last-child { border-bottom: none; }
+    .entity-domain {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      padding: 3px 7px;
+      border-radius: 6px;
+      background: rgba(255,255,255,0.06);
+      color: var(--sub);
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .entity-desc strong { display: block; margin-bottom: 2px; color: #fff; }
+    .entity-desc span { color: var(--sub); font-size: 13px; }
+
+    /* ── NAVIGATION PILLS ── */
+    .nav-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 16px 0;
+    }
+    .nav-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 10px;
+      background: var(--card2);
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--sub);
+      border: 1px solid var(--border);
+    }
+
+    /* ── FOOTER ── */
+    .guide-footer {
+      margin-top: 60px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      text-align: center;
+      font-size: 12px;
+      color: var(--sub);
+    }
+  </style>
+</head>
+<body>
+
+<div class="cover">
+  <div class="cover-icon">🐠</div>
+  <h1>Aquarium Controller</h1>
+  <div class="subtitle">User Guide</div>
+  <div class="version">Node.js + Home Assistant</div>
+</div>
+
+<div class="page">
+
+  <!-- TABLE OF CONTENTS -->
+  <div class="toc">
+    <h2>Contents</h2>
+    <ol>
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#prerequisites">Prerequisites</a></li>
+      <li><a href="#ha-connection">Connecting to Home Assistant</a>
+        <ol>
+          <li><a href="#ha-token">Generating a Long-Lived Access Token</a></li>
+          <li><a href="#ha-connect">Entering Connection Details</a></li>
+        </ol>
+      </li>
+      <li><a href="#ha-helpers">Setting Up HA Helpers (Dosing)</a>
+        <ol>
+          <li><a href="#helper-input-number">input_number Helpers</a></li>
+          <li><a href="#helper-input-boolean">input_boolean Trigger</a></li>
+          <li><a href="#helper-automation">Dosing Automation</a></li>
+        </ol>
+      </li>
+      <li><a href="#settings">Configuring the App</a>
+        <ol>
+          <li><a href="#settings-lighting">Lighting Channels</a></li>
+          <li><a href="#settings-dosing">Dosing Pumps</a></li>
+          <li><a href="#settings-pumps">Circulation Pumps</a></li>
+          <li><a href="#settings-switches">Switches</a></li>
+          <li><a href="#settings-sensors">Sensors</a></li>
+        </ol>
+      </li>
+      <li><a href="#using-lighting">Using the Lighting Page</a></li>
+      <li><a href="#using-pumps">Using the Pumps Page</a></li>
+      <li><a href="#using-dosing">Using the Dosing Page</a></li>
+      <li><a href="#using-sensors">Using the Sensors Page</a></li>
+      <li><a href="#using-switches">Using the Switches Page</a></li>
+      <li><a href="#architecture">How It All Works</a></li>
+      <li><a href="#troubleshooting">Troubleshooting</a></li>
+    </ol>
+  </div>
+
+
+  <!-- 1. OVERVIEW -->
+  <div class="section" id="overview">
+    <div class="section-header">
+      <div class="section-num">1</div>
+      <h2>Overview</h2>
+    </div>
+
+    <p>Aquarium Controller is a Node.js web application that runs on your local network and connects to Home Assistant via its WebSocket API. It provides a mobile-optimised interface for managing your aquarium's lighting, circulation pumps, dosing pumps, sensors, and power switches.</p>
+
+    <p>The app does not require any cloud services — everything runs locally. Home Assistant is used as the bridge to your physical devices (ESPs, smart plugs, etc.), and the app talks to HA directly over your LAN.</p>
+
+    <div class="nav-pills">
+      <div class="nav-pill">⌂ Dashboard</div>
+      <div class="nav-pill">💡 Lighting</div>
+      <div class="nav-pill">🌊 Pumps</div>
+      <div class="nav-pill">🧪 Dosing</div>
+      <div class="nav-pill">📈 Sensors</div>
+      <div class="nav-pill">⏻ Switches</div>
+      <div class="nav-pill">⚙ Settings</div>
+    </div>
+
+    <h3>What the App Controls Directly</h3>
+    <p>Some features are handled entirely by the Node.js server, without needing HA automations:</p>
+    <table>
+      <tr><th>Feature</th><th>How it works</th><th>Update interval</th></tr>
+      <tr><td>Lighting schedule</td><td>Server loop calls <code>light.turn_on</code> with computed brightness</td><td>Every 60 seconds</td></tr>
+      <tr><td>Circulation pump modes</td><td>Server loop calls <code>fan.set_percentage</code> based on mode algorithm</td><td>Every 2 seconds</td></tr>
+      <tr><td>Switch schedules &amp; sensor automations</td><td>Server loop checks time/sensor values and toggles switches</td><td>Every 30 seconds</td></tr>
+      <tr><td>Dosing schedule</td><td>Server loop fires <code>input_boolean</code> trigger at configured intervals</td><td>Every 30 seconds</td></tr>
+    </table>
+
+    <div class="callout info">
+      <div class="callout-icon">ℹ️</div>
+      <div class="callout-body">
+        <strong>Important</strong>
+        Because the lighting, pump, and dosing loops run inside the Node.js process, the server must be running continuously for schedules to be enforced. Consider running it as a system service (e.g. <code>pm2</code> or <code>systemd</code>).
+      </div>
+    </div>
+  </div>
+
+
+  <!-- 2. PREREQUISITES -->
+  <div class="section" id="prerequisites">
+    <div class="section-header">
+      <div class="section-num">2</div>
+      <h2>Prerequisites</h2>
+    </div>
+
+    <table>
+      <tr><th>Requirement</th><th>Notes</th></tr>
+      <tr><td>Node.js 18+</td><td>Run <code>node -v</code> to check. Download from nodejs.org if needed.</td></tr>
+      <tr><td>Home Assistant</td><td>Any recent version. Must be reachable on your local network.</td></tr>
+      <tr><td>HA Long-Lived Access Token</td><td>Generated in your HA profile — see Section 3.</td></tr>
+      <tr><td>Devices in HA</td><td>Your lights, pumps, and switches must already be added to HA as entities.</td></tr>
+    </table>
+
+    <h3>Starting the Server</h3>
+    <div class="steps">
+      <div class="step"><div class="step-num"></div><div class="step-body">Place all project files in a folder (e.g. <code>~/aquarium</code>).</div></div>
+      <div class="step"><div class="step-num"></div><div class="step-body">Run <code>npm install</code> in that folder to install dependencies (<code>express</code> and <code>ws</code>).</div></div>
+      <div class="step"><div class="step-num"></div><div class="step-body">Run <code>node server.js</code> to start the server. By default it listens on port <strong>4000</strong>.</div></div>
+      <div class="step"><div class="step-num"></div><div class="step-body">Open <code>http://&lt;your-server-ip&gt;:4000</code> in a browser on your phone or computer.</div></div>
+    </div>
+
+    <div class="callout tip">
+      <div class="callout-icon">💡</div>
+      <div class="callout-body">
+        <strong>Tip — Run on startup</strong>
+        Install <code>pm2</code> globally (<code>npm install -g pm2</code>), then run <code>pm2 start server.js --name aquarium</code> followed by <code>pm2 save</code> and <code>pm2 startup</code> to keep it running across reboots.
+      </div>
+    </div>
+  </div>
+
+
+  <!-- 3. HA CONNECTION -->
+  <div class="section" id="ha-connection">
+    <div class="section-header">
+      <div class="section-num">3</div>
+      <h2>Connecting to Home Assistant</h2>
+    </div>
+
+    <h3 id="ha-token">Generating a Long-Lived Access Token</h3>
+    <p>The app authenticates with HA using a Long-Lived Access Token (LLAT). This is a personal token tied to your HA user account.</p>
+
+    <div class="steps">
+      <div class="step"><div class="step-num"></div><div class="step-body">In Home Assistant, click your <strong>username / profile picture</strong> in the bottom-left sidebar.</div></div>
+      <div class="step"><div class="step-num"></div><div class="step-body">Scroll to the <strong>Security</strong> section at the bottom of the profile page.</div></div>
+      <div class="step"><div class="step-num"></div><div class="step-body">Under <strong>Long-Lived Access Tokens</strong>, click <strong>Create Token</strong>.</div></div>
+      <div class="step"><div class="step-num"></div><div class="step-body">Give it a name (e.g. <em>Aquarium Controller</em>) and click <strong>OK</strong>.</div></div>
+      <div class="step"><div class="step-num"></div><div class="step-body"><strong>Copy the token immediately</strong> — it will not be shown again. Paste it somewhere safe temporarily.</div></div>
+    </div>
+
+    <div class="callout warn">
+      <div class="callout-icon">⚠️</div>
+      <div class="callout-body">
+        <strong>Keep your token secure</strong>
+        The token grants full access to your HA instance. Do not share it or commit it to version control. It is stored in <code>config.json</code> on your server.
+      </div>
+    </div>
+
+    <h3 id="ha-connect">Entering Connection Details</h3>
+    <div class="steps">
+      <div class="step"><div class="step-num"></div><div class="step-body">Open the app and tap the <strong>⚙ gear icon</strong> in the top-right corner to open Settings.</div></div>
+      <div class="step"><div class="step-num"></div><div class="step-body">Tap the <strong>Connection</strong> card under Home Assistant to expand it.</div></div>
+      <div class="step"><div class="step-num"></div><div class="step-body">Enter your HA <strong>Host / IP Address</strong> (e.g. <code>192.168.1.123</code>). Do not include <code>http://</code>.</div></div>
+      <div class="step"><div class="step-num"></div><div class="step-body">Leave the <strong>Port</strong> as <code>8123</code> unless you have changed it in HA.</div></div>
+      <div class="step"><div class="step-num"></div><div class="step-body">Paste your token into the <strong>Long-Lived Access Token</strong> field.</div></div>
+      <div class="step"><div class="step-num"></div><div class="step-body">Optionally tap <strong>Test</strong> to verify the connection before saving.</div></div>
+      <div class="step"><div class="step-num"></div><div class="step-body">Tap <strong>Save &amp; Connect</strong>. The badge will turn green when connected.</div></div>
+    </div>
+
+    <p>Once connected, all entity dropdown selectors throughout Settings will be populated from your live HA entity list. Use the <strong>↻ Refresh</strong> button at the top of the Lighting Channels section to reload the entity list at any time.</p>
+  </div>
+
+
+  <!-- 4. HA HELPERS -->
+  <div class="section" id="ha-helpers">
+    <div class="section-header">
+      <div class="section-num">4</div>
+      <h2>Setting Up HA Helpers (Dosing)</h2>
+    </div>
+
+    <p>The dosing system uses three HA helpers per pump to store calibration and dosing data in HA itself, keeping it in sync even if the app is restarted. You need to create these helpers manually in HA before configuring dosing in the app.</p>
+
+    <div class="callout info">
+      <div class="callout-icon">ℹ️</div>
+      <div class="callout-body">
+        <strong>Where to create helpers</strong>
+        In HA go to <strong>Settings → Devices &amp; Services → Helpers</strong> and click <strong>+ Create Helper</strong> for each one below. Repeat for each dosing pump.
+      </div>
+    </div>
+
+    <h3 id="helper-input-number">input_number Helpers</h3>
+    <p>Create two <code>input_number</code> helpers per pump:</p>
+
+    <div class="entity-list">
+      <div class="entity-item">
+        <div class="entity-domain">input_number</div>
+        <div class="entity-desc">
+          <strong>Calibration Multiplier</strong>
+          <span>Stores seconds-per-mL for this pump. Suggested name: <code>calibration_multiplier_1</code> (giving entity ID <code>input_number.calibration_multiplier_1</code>). Set the range to <strong>0.01 – 100</strong>, step <strong>0.0001</strong>. Initial value: <strong>1</strong>.</span>
+        </div>
+      </div>
+      <div class="entity-item">
+        <div class="entity-domain">input_number</div>
+        <div class="entity-desc">
+          <strong>Dose Volume</strong>
+          <span>Stores the target dose in mL. Suggested name: <code>dosing_volume_1</code> (entity ID <code>input_number.dosing_volume_1</code>). Set range to <strong>0.1 – 100</strong>, step <strong>0.1</strong>. Initial value: your desired dose (e.g. <strong>2</strong>).</span>
+        </div>
+      </div>
+    </div>
+
+    <h3 id="helper-input-boolean">input_boolean Trigger</h3>
+    <p>Create one <code>input_boolean</code> helper per pump:</p>
+
+    <div class="entity-list">
+      <div class="entity-item">
+        <div class="entity-domain">input_boolean</div>
+        <div class="entity-desc">
+          <strong>Dose Trigger</strong>
+          <span>Acts as a signal to start the dosing automation. Suggested name: <code>dose_trigger_pump_1</code> (entity ID <code>input_boolean.dose_trigger_pump_1</code>). The app turns this <strong>ON</strong> to request a dose; your HA automation handles the rest and turns it back <strong>OFF</strong>.</span>
+        </div>
+      </div>
+    </div>
+
+    <h3 id="helper-automation">Dosing Automation</h3>
+    <p>Create one automation per pump that responds to the trigger boolean. The automation should:</p>
+    <ol style="padding-left:20px;margin:12px 0;font-size:14px;line-height:2;">
+      <li>Trigger when <code>input_boolean.dose_trigger_pump_1</code> turns <strong>ON</strong></li>
+      <li>Turn ON the pump switch entity (e.g. <code>switch.dosing_pump_1</code>)</li>
+      <li>Wait for <code>input_number.dosing_volume_1</code> × <code>input_number.calibration_multiplier_1</code> seconds</li>
+      <li>Turn OFF the pump switch entity</li>
+      <li>Turn OFF <code>input_boolean.dose_trigger_pump_1</code></li>
+    </ol>
+
+    <p>Here is the equivalent YAML for the HA automation editor:</p>
+    <pre><code>alias: Dose Pump 1
+trigger:
+  - platform: state
+    entity_id: input_boolean.dose_trigger_pump_1
+    to: "on"
+action:
+  - service: switch.turn_on
+    target:
+      entity_id: switch.dosing_pump_1
+  - delay:
+      seconds: >
+        {{ states('input_number.dosing_volume_1') | float *
+           states('input_number.calibration_multiplier_1') | float }}
+  - service: switch.turn_off
+    target:
+      entity_id: switch.dosing_pump_1
+  - service: input_boolean.turn_off
+    target:
+      entity_id: input_boolean.dose_trigger_pump_1
+mode: single</code></pre>
+
+    <div class="callout tip">
+      <div class="callout-icon">💡</div>
+      <div class="callout-body">
+        <strong>Naming convention</strong>
+        Keep the naming consistent — replace the trailing <code>_1</code> with <code>_2</code>, <code>_3</code>, etc. for each additional pump. This makes it easy to identify which helpers belong to which pump.
+      </div>
+    </div>
+  </div>
+
+
+  <!-- 5. SETTINGS -->
+  <div class="section" id="settings">
+    <div class="section-header">
+      <div class="section-num">5</div>
+      <h2>Configuring the App</h2>
+    </div>
+
+    <p>All configuration is done in the <strong>Settings</strong> page (⚙ icon). Each section is a collapsible card. Tap the card header to expand it. Changes within each section are saved independently with their own <strong>Save</strong> button — expanding a section does not save it automatically.</p>
+
+    <h3 id="settings-lighting">Lighting Channels</h3>
+    <p>Add one entry per LED channel. Each channel maps a friendly name to a HA <code>light</code> entity.</p>
+
+    <table>
+      <tr><th>Field</th><th>Required</th><th>Description</th></tr>
+      <tr><td>Name</td><td><span class="badge required">Required</span></td><td>Display name shown in the app (e.g. Blue, Royal Blue, Cool White)</td></tr>
+      <tr><td>Light Entity</td><td><span class="badge required">Required</span></td><td>The HA <code>light</code> entity for this channel. Must support brightness (0–255).</td></tr>
+    </table>
+
+    <div class="callout info">
+      <div class="callout-icon">ℹ️</div>
+      <div class="callout-body">
+        <strong>Light entity requirements</strong>
+        Each light entity must support the <code>brightness</code> attribute. PWM-controlled LEDs via an ESP32 running ESPHome work well. RGBW or CCT lights may need a template entity to expose a single brightness channel.
+      </div>
+    </div>
+
+    <h3 id="settings-dosing">Dosing Pumps</h3>
+    <p>Add one entry per dosing pump. Each pump requires up to four HA entities:</p>
+
+    <table>
+      <tr><th>Field</th><th>Required</th><th>Description</th></tr>
+      <tr><td>Name</td><td><span class="badge required">Required</span></td><td>Display name (e.g. Calcium, Alkalinity, Magnesium)</td></tr>
+      <tr><td>Switch Entity</td><td><span class="badge required">Required</span></td><td>The <code>switch</code> entity that physically controls the pump. Used for the manual ON/OFF priming toggle.</td></tr>
+      <tr><td>Calibration Multiplier</td><td><span class="badge required">Required</span></td><td>The <code>input_number</code> helper storing seconds-per-mL (see Section 4).</td></tr>
+      <tr><td>Dose Volume</td><td><span class="badge required">Required</span></td><td>The <code>input_number</code> helper storing the target dose in mL (see Section 4).</td></tr>
+      <tr><td>Trigger Boolean</td><td><span class="badge required">Required</span></td><td>The <code>input_boolean</code> helper that fires the dosing automation (see Section 4).</td></tr>
+    </table>
+
+    <p>Tap <strong>Save Dosing</strong> after configuring pumps. Dosing schedules are configured on the Dosing page itself, not here.</p>
+
+    <h3 id="settings-pumps">Circulation Pumps</h3>
+    <p>Add one entry per circulation pump.</p>
+
+    <table>
+      <tr><th>Field</th><th>Required</th><th>Description</th></tr>
+      <tr><td>Name</td><td><span class="badge required">Required</span></td><td>Display name (e.g. Return Pump, Wavemaker 1)</td></tr>
+      <tr><td>Switch / Fan Entity</td><td><span class="badge required">Required</span></td><td>The HA entity for this pump. Must be a <code>fan</code> entity with <code>set_percentage</code> support for variable speed modes. A plain <code>switch</code> entity works too but only supports Constant mode at 100%.</td></tr>
+    </table>
+
+    <div class="callout warn">
+      <div class="callout-icon">⚠️</div>
+      <div class="callout-body">
+        <strong>Fan entities for variable speed</strong>
+        For Wave, Pulse, and Random modes to work, the pump must be exposed to HA as a <code>fan</code> entity that supports the <code>fan.set_percentage</code> service. Many ESPHome-based controllers and Shelly Dimmer devices support this. Check your entity in HA's Developer Tools → States to confirm the entity domain is <code>fan</code> and it has a <code>percentage</code> attribute.
+      </div>
+    </div>
+
+    <h3 id="settings-switches">Switches</h3>
+    <p>Add one entry per controllable switch (e.g. refugium light, UV steriliser, heater).</p>
+
+    <table>
+      <tr><th>Field</th><th>Required</th><th>Description</th></tr>
+      <tr><td>Display Name</td><td><span class="badge required">Required</span></td><td>Friendly name shown in the app</td></tr>
+      <tr><td>Switch Entity</td><td><span class="badge required">Required</span></td><td>Any HA <code>switch</code> entity</td></tr>
+      <tr><td>Rated Watts</td><td><span class="badge optional">Optional</span></td><td>Used in the power summary display</td></tr>
+      <tr><td>Icon</td><td><span class="badge optional">Optional</span></td><td>Any emoji character. Defaults to ⏻</td></tr>
+    </table>
+
+    <h3 id="settings-sensors">Sensors</h3>
+    <p>The sensors section has two parts: the four built-in sensor groups, and custom sensors.</p>
+
+    <h4>Built-in Sensors</h4>
+    <p>Four groups are pre-configured with display ranges and optimal zones: Temperature, pH, ORP, and KH/Alkalinity. For each one you can:</p>
+    <ul style="padding-left:20px;margin:8px 0;font-size:14px;line-height:2;">
+      <li>Set a <strong>Primary</strong> sensor entity (the main value displayed)</li>
+      <li>Set a <strong>Secondary / Backup</strong> sensor entity (shown in the dual-probe comparison)</li>
+      <li>Toggle <strong>Active</strong> to show or hide the sensor from the dashboard and sensors page</li>
+    </ul>
+
+    <h4>Custom Sensors</h4>
+    <p>Tap <strong>+ Add Custom Sensor</strong> to add any additional sensor entity. Each custom sensor has:</p>
+
+    <table>
+      <tr><th>Field</th><th>Description</th></tr>
+      <tr><td>Name</td><td>Display name (e.g. RO Level, TDS, Salinity)</td></tr>
+      <tr><td>Sensor Entity</td><td>Any HA <code>sensor</code> entity</td></tr>
+      <tr><td>Unit</td><td>Choose from: °C, °F, ppm, %, ‰, mV, dKH, none, or custom (enter your own)</td></tr>
+      <tr><td>Show on Home</td><td>If enabled, this sensor appears as a tile on the main dashboard</td></tr>
+      <tr><td>Show Graph</td><td>If enabled, this sensor appears on the Sensors page with an 8h history chart</td></tr>
+    </table>
+  </div>
+
+
+  <!-- 6. LIGHTING -->
+  <div class="section" id="using-lighting">
+    <div class="section-header">
+      <div class="section-num">6</div>
+      <h2>Using the Lighting Page</h2>
+    </div>
+
+    <p>The lighting page lets you set a daily schedule for each channel, controlling when they turn on and off and how brightness ramps up and down during sunrise/sunset periods.</p>
+
+    <h3>Schedule Settings (per channel)</h3>
+    <table>
+      <tr><th>Setting</th><th>Description</th></tr>
+      <tr><td>Start Time</td><td>When the channel begins ramping up from 0%</td></tr>
+      <tr><td>End Time</td><td>When the channel begins ramping down to 0% (turns off at this time)</td></tr>
+      <tr><td>Ramp Period (hours)</td><td>Duration of the sunrise and sunset ramp. E.g. 3 hours means the channel spends 3 hours ramping up and 3 hours ramping down. Must be less than half the total on-window.</td></tr>
+      <tr><td>Max Brightness</td><td>Peak brightness value (0–255) during the full-intensity midday period</td></tr>
+      <tr><td>Graph Colour</td><td>The colour used for this channel's line on the schedule graph</td></tr>
+    </table>
+
+    <p>The page shows a live preview graph of all channels over a 24-hour period so you can visualise the light cycle before saving.</p>
+
+    <div class="callout tip">
+      <div class="callout-icon">💡</div>
+      <div class="callout-body">
+        <strong>Staggered channels</strong>
+        For a natural look, stagger your channels slightly. For example, set Blue to start at 08:00 and white channels to start at 08:30–09:00, with the whites having a lower max brightness. This mimics the way natural light shifts colour temperature through the day.
+      </div>
+    </div>
+
+    <p>Tap <strong>Save Schedule</strong> to apply. The server loop applies brightness changes every 60 seconds based on Sydney local time — the first update after saving may take up to a minute.</p>
+  </div>
+
+
+  <!-- 7. PUMPS -->
+  <div class="section" id="using-pumps">
+    <div class="section-header">
+      <div class="section-num">7</div>
+      <h2>Using the Pumps Page</h2>
+    </div>
+
+    <p>Each circulation pump has an on/off toggle and a live speed bar, followed by a mode selector and mode-specific settings.</p>
+
+    <h3>Flow Modes</h3>
+    <table>
+      <tr><th>Mode</th><th>Settings</th><th>Behaviour</th></tr>
+      <tr>
+        <td>〰️ Constant</td>
+        <td>Speed %</td>
+        <td>Runs at a fixed speed continuously. The server sets the fan percentage once and only updates when the setting changes.</td>
+      </tr>
+      <tr>
+        <td>🌊 Wave</td>
+        <td>Min %, Max %, Period (seconds)</td>
+        <td>Speed follows a smooth sine wave between min and max over the configured period. Updated every 2 seconds for a fluid motion effect.</td>
+      </tr>
+      <tr>
+        <td>💓 Pulse</td>
+        <td>Min %, Max %, Pulse Length (0.5–3s), Delay (seconds)</td>
+        <td>Alternates sharply between Max for the pulse duration and Min for the delay duration. Good for powerheads that simulate surge/tide.</td>
+      </tr>
+      <tr>
+        <td>🎲 Random</td>
+        <td>Min %, Max %, Change Rate (Slow/Medium/Fast)</td>
+        <td>Random walk between min and max. Speed changes by ±2% (slow), ±5% (medium), or ±10% (fast) every 2 seconds. Mimics natural turbulence.</td>
+      </tr>
+    </table>
+
+    <div class="callout info">
+      <div class="callout-icon">ℹ️</div>
+      <div class="callout-body">
+        <strong>Variable speed requirement</strong>
+        Wave, Pulse, and Random modes require the pump entity to be a <code>fan</code> domain entity with <code>set_percentage</code> support in HA. If your pump is a simple on/off switch, only Constant mode at 100% is meaningful.
+      </div>
+    </div>
+
+    <p>Select a mode, adjust the settings, then tap <strong>💾 Save</strong>. The server loop immediately begins using the new settings. The live speed bar at the top of each card reflects the actual percentage currently being sent to HA.</p>
+  </div>
+
+
+  <!-- 8. DOSING -->
+  <div class="section" id="using-dosing">
+    <div class="section-header">
+      <div class="section-num">8</div>
+      <h2>Using the Dosing Page</h2>
+    </div>
+
+    <h3>Manual Control</h3>
+    <p>Each pump card has two control buttons:</p>
+
+    <div class="entity-list">
+      <div class="entity-item">
+        <div class="entity-domain" style="background:rgba(26,58,26,0.5);color:#69f07a;">ON/OFF</div>
+        <div class="entity-desc">
+          <strong>Toggle (Priming)</strong>
+          <span>Turns the pump switch directly on or off. Use this for priming lines after initial setup or when replacing tubing. The pump will run continuously until you turn it off.</span>
+        </div>
+      </div>
+      <div class="entity-item">
+        <div class="entity-domain" style="background:rgba(12,37,64,0.5);color:var(--cyan);">DOSE</div>
+        <div class="entity-desc">
+          <strong>Run One Dose</strong>
+          <span>Fires the <code>input_boolean</code> trigger, which starts your HA automation. The automation runs the pump for exactly (dose volume × calibration multiplier) seconds, then turns it off. The button is disabled if no trigger boolean is configured.</span>
+        </div>
+      </div>
+    </div>
+
+    <h3>Dose Volume</h3>
+    <p>The current dose volume (read live from the HA <code>input_number</code> helper) is shown on each card. To change it, enter a new value in the input field and tap <strong>Save</strong> — this writes directly back to the HA helper, keeping HA and the app in sync.</p>
+
+    <h3>Dosing Schedule</h3>
+    <p>Each pump has its own schedule, configured directly on this page:</p>
+
+    <table>
+      <tr><th>Setting</th><th>Description</th></tr>
+      <tr><td>Schedule Enabled</td><td>Toggle to activate or pause automatic dosing for this pump without losing settings</td></tr>
+      <tr><td>All Hours</td><td>If ON, the pump doses at the configured interval around the clock. If OFF, dosing is restricted to between Start Time and End Time.</td></tr>
+      <tr><td>Start / End Time</td><td>Active window for dosing (only visible when All Hours is OFF)</td></tr>
+      <tr><td>Interval</td><td>How often to dose, in minutes or hours</td></tr>
+      <tr><td>Offset from Hour</td><td>Shifts the dose time within each hour. E.g. if Calcium has offset 15 and Alkalinity has offset 45, they dose 30 minutes apart every hour — useful to avoid precipitation when dosing competing supplements.</td></tr>
+    </table>
+
+    <p>Tap <strong>💾 Save Schedule</strong> on each pump after changing schedule settings.</p>
+
+    <div class="callout warn">
+      <div class="callout-icon">⚠️</div>
+      <div class="callout-body">
+        <strong>Never dose calcium and alkalinity simultaneously</strong>
+        Always use the offset setting to ensure at least 15–30 minutes between calcium and alkalinity doses. Dosing them at the same time causes precipitation in the water column.
+      </div>
+    </div>
+
+    <h3>Calibration</h3>
+    <p>Calibration establishes how many seconds the pump needs to run to deliver 1 mL. The result is stored as a multiplier (sec/mL) in the HA <code>input_number</code> helper.</p>
+
+    <div class="steps">
+      <div class="step"><div class="step-num"></div><div class="step-body">Select the pump to calibrate from the dropdown.</div></div>
+      <div class="step"><div class="step-num"></div><div class="step-body">Prepare a measuring vessel under the pump outlet.</div></div>
+      <div class="step"><div class="step-num"></div><div class="step-body">Tap <strong>▶ Dose 10 mL</strong>. The pump will run for 10 × its current multiplier seconds.</div></div>
+      <div class="step"><div class="step-num"></div><div class="step-body">Measure the actual output in mL.</div></div>
+      <div class="step"><div class="step-num"></div><div class="step-body">Enter the measured value and tap <strong>💾 Save Calibration</strong>.</div></div>
+    </div>
+
+    <p>The new multiplier is calculated as: <code>new multiplier = (10 ÷ measured mL) × current multiplier</code>. This proportional correction means you can calibrate iteratively — each calibration brings the pump closer to exact. After two or three calibrations the accuracy will be very high.</p>
+
+    <div class="callout tip">
+      <div class="callout-icon">💡</div>
+      <div class="callout-body">
+        <strong>First calibration</strong>
+        If the pump has never been calibrated, the multiplier will be 1 (1 second per mL). Run the Dose 10 mL function, measure the output, and save. The new multiplier will be set accordingly. Repeat once more for improved accuracy.
+      </div>
+    </div>
+  </div>
+
+
+  <!-- 9. SENSORS -->
+  <div class="section" id="using-sensors">
+    <div class="section-header">
+      <div class="section-num">9</div>
+      <h2>Using the Sensors Page</h2>
+    </div>
+
+    <p>The sensors page shows all active sensors with live readings and 8-hour history charts.</p>
+
+    <h3>Built-in Sensors</h3>
+    <p>Temperature, pH, ORP, and KH each display:</p>
+    <ul style="padding-left:20px;margin:8px 0;font-size:14px;line-height:2;">
+      <li>A large current reading</li>
+      <li>A status bar showing where the value falls within the absolute range, with markers for the optimal zone</li>
+      <li>A coloured pill indicating <strong>✓ Optimal</strong>, <strong>⚠ Caution</strong>, or <strong>⚠ Out of Range</strong></li>
+      <li>An 8-hour sparkline chart with min/max annotation</li>
+      <li>A dual-probe comparison if a secondary sensor is configured</li>
+    </ul>
+
+    <table>
+      <tr><th>Sensor</th><th>Optimal range</th><th>Absolute range</th></tr>
+      <tr><td>Temperature</td><td>24–27 °C</td><td>22–30 °C</td></tr>
+      <tr><td>pH</td><td>8.1–8.4</td><td>7.8–8.6</td></tr>
+      <tr><td>ORP</td><td>300–450 mV</td><td>200–500 mV</td></tr>
+      <tr><td>KH</td><td>8–12 dKH</td><td>6–14 dKH</td></tr>
+    </table>
+
+    <h3>Custom Sensors</h3>
+    <p>Custom sensors configured in Settings with <strong>Show Graph</strong> enabled appear at the bottom of the sensors page with a live value and sparkline chart. They do not have optimal/absolute range indicators.</p>
+
+    <div class="callout info">
+      <div class="callout-icon">ℹ️</div>
+      <div class="callout-body">
+        <strong>History data</strong>
+        The server records sensor history in memory and persists it to <code>history.json</code> every 5 minutes. History is retained for up to 24 hours (288 readings at 5-minute intervals). If the server is restarted, up to 5 minutes of recent readings may be lost, but older data will be restored from disk.
+      </div>
+    </div>
+  </div>
+
+
+  <!-- 10. SWITCHES -->
+  <div class="section" id="using-switches">
+    <div class="section-header">
+      <div class="section-num">10</div>
+      <h2>Using the Switches Page</h2>
+    </div>
+
+    <p>Each switch can be controlled manually or automated by the server. Tap the toggle on any switch card to turn it on or off immediately.</p>
+
+    <h3>Automation Modes</h3>
+    <p>Each switch has an expandable automation panel with three modes:</p>
+
+    <table>
+      <tr><th>Mode</th><th>Behaviour</th></tr>
+      <tr><td>Manual</td><td>No automation. The switch only responds to manual taps in the app or changes made in HA.</td></tr>
+      <tr><td>Schedule</td><td>The server turns the switch on at a configured time and off at another. Checked every 30 seconds. Good for refugium lighting, UV sterilisers, etc.</td></tr>
+      <tr><td>Sensor</td><td>The switch toggles based on a sensor value crossing a threshold. Configure a sensor entity, trigger type (high or low), setpoint, and variance band. For example, a heater could be set to turn on when temperature falls below 25.5°C and off when it reaches 26.5°C.</td></tr>
+    </table>
+
+    <div class="callout tip">
+      <div class="callout-icon">💡</div>
+      <div class="callout-body">
+        <strong>Sensor-based automation with variance</strong>
+        The variance setting creates a hysteresis band to prevent rapid on/off cycling. A setpoint of 26°C with variance of 1°C means the switch turns on at 25.5°C and off at 26.5°C (for "low" trigger type).
+      </div>
+    </div>
+  </div>
+
+
+  <!-- 11. ARCHITECTURE -->
+  <div class="section" id="architecture">
+    <div class="section-header">
+      <div class="section-num">11</div>
+      <h2>How It All Works</h2>
+    </div>
+
+    <p>Understanding the architecture helps when things don't behave as expected.</p>
+
+    <h3>Communication Flow</h3>
+    <pre><code>Browser (phone/computer)
+        ↕  HTTP  (port 4000)
+Node.js server  (server.js)
+        ↕  WebSocket  (HA WebSocket API, port 8123)
+Home Assistant
+        ↕  Zigbee / Z-Wave / Wi-Fi / ESPHome / etc.
+Physical devices (lights, pumps, sensors)</code></pre>
+
+    <p>The Node.js server maintains a persistent WebSocket connection to HA. It subscribes to all state change events, so its internal state cache is always up to date. When the app sends a command (e.g. turn on a pump), the server calls the appropriate HA service via the WebSocket. HA then relays that to the physical device.</p>
+
+    <h3>Server-Side Loops</h3>
+    <table>
+      <tr><th>Loop</th><th>Interval</th><th>What it does</th></tr>
+      <tr><td>Lighting</td><td>60 s</td><td>Computes brightness for each channel using a trapezoidal curve (ramp up → hold → ramp down) and calls <code>light.turn_on</code> or <code>light.turn_off</code></td></tr>
+      <tr><td>Pump modes</td><td>2 s</td><td>Computes target speed for each pump (wave/pulse/random maths) and calls <code>fan.set_percentage</code>. Only sends if value changed.</td></tr>
+      <tr><td>Switch automation</td><td>30 s</td><td>Checks scheduled times and sensor thresholds, toggles switches as needed</td></tr>
+      <tr><td>Dosing schedule</td><td>30 s</td><td>Checks whether any pump is due for a dose based on interval and offset, fires <code>input_boolean.turn_on</code></td></tr>
+      <tr><td>History persist</td><td>5 min</td><td>Writes sensor history cache to <code>history.json</code></td></tr>
+    </table>
+
+    <h3>Data Storage</h3>
+    <table>
+      <tr><th>File</th><th>Contents</th></tr>
+      <tr><td><code>config.json</code></td><td>HA connection details (host, port, token)</td></tr>
+      <tr><td><code>settings.json</code></td><td>All app configuration: lighting channels &amp; schedules, pump entities &amp; mode configs, dosing pump entities &amp; schedules, switches, sensors</td></tr>
+      <tr><td><code>history.json</code></td><td>Sensor reading history (up to 24h per tracked entity)</td></tr>
+    </table>
+
+    <div class="callout warn">
+      <div class="callout-icon">⚠️</div>
+      <div class="callout-body">
+        <strong>Back up your settings</strong>
+        <code>settings.json</code> contains all your configuration. Keep a backup copy, especially after a complete setup. If the file is lost, you will need to reconfigure everything from scratch.
+      </div>
+    </div>
+  </div>
+
+
+  <!-- 12. TROUBLESHOOTING -->
+  <div class="section" id="troubleshooting">
+    <div class="section-header">
+      <div class="section-num">12</div>
+      <h2>Troubleshooting</h2>
+    </div>
+
+    <h3>Connection Issues</h3>
+    <table>
+      <tr><th>Symptom</th><th>Likely cause &amp; fix</th></tr>
+      <tr><td>"Not configured" in footer</td><td>No HA credentials saved. Go to Settings → Connection and enter your host and token.</td></tr>
+      <tr><td>"Disconnected — retrying…"</td><td>Server can reach the configured host but the WebSocket failed. Check that HA is running and reachable at the configured IP. The server retries automatically every 10 seconds.</td></tr>
+      <tr><td>Entity dropdowns show "Connect to HA to see entities"</td><td>HA is not connected. Resolve the connection issue first, then use the ↻ Refresh button.</td></tr>
+      <tr><td>Test passes but Save &amp; Connect shows disconnected</td><td>The token is valid but the WebSocket may be taking a moment to authenticate. Wait 5–10 seconds and check the badge again.</td></tr>
+    </table>
+
+    <h3>Lighting Not Changing</h3>
+    <table>
+      <tr><th>Symptom</th><th>Fix</th></tr>
+      <tr><td>Lights don't change at scheduled times</td><td>The server loop runs every 60 seconds. Wait up to a minute after saving. Check the server console — it logs every light loop action.</td></tr>
+      <tr><td>Brightness is always 0</td><td>Check that Start Time is before End Time and that the current time falls within the window. Check that Max Brightness is set above 0.</td></tr>
+      <tr><td>Ramp doesn't look right</td><td>The ramp period must be less than half the total on-window (end − start). If it's too long, the ramps overlap and the channel never reaches max brightness.</td></tr>
+    </table>
+
+    <h3>Dosing Issues</h3>
+    <table>
+      <tr><th>Symptom</th><th>Fix</th></tr>
+      <tr><td>"Run One Dose" button is greyed out</td><td>No trigger boolean is configured for this pump in Settings → Dosing Pumps.</td></tr>
+      <tr><td>Dose triggers but pump doesn't run</td><td>Check the HA automation is enabled and that the trigger entity matches the one configured in the app. Check the pump switch entity is correct.</td></tr>
+      <tr><td>Dose volume shows "—"</td><td>The <code>input_number</code> dose volume helper is not configured, or its value in HA is 0. Enter a volume and tap Save.</td></tr>
+      <tr><td>Calibration multiplier shows 0</td><td>The calibration helper is not configured or has never been set. Do an initial calibration using the Calibration section on the Dosing page.</td></tr>
+      <tr><td>Scheduled dose not firing</td><td>Check that Schedule Enabled is ON for the pump. Check the server has been restarted after saving the schedule — the dosing loop reads settings on every tick but the schedule state only loads at save time.</td></tr>
+    </table>
+
+    <h3>Pump Modes Not Working</h3>
+    <table>
+      <tr><th>Symptom</th><th>Fix</th></tr>
+      <tr><td>Speed stays at a fixed value regardless of mode</td><td>The entity is likely a <code>switch</code> not a <code>fan</code>. Check in HA Developer Tools → States that the entity ID starts with <code>fan.</code> and has a <code>percentage</code> attribute.</td></tr>
+      <tr><td>Live speed bar doesn't move</td><td>The bar reflects what the server is sending. If the pump is OFF (toggle is off), the speed is 0. Turn the pump ON first.</td></tr>
+    </table>
+
+    <h3>Sensor History Missing</h3>
+    <table>
+      <tr><th>Symptom</th><th>Fix</th></tr>
+      <tr><td>"Not enough data yet" on sparkline</td><td>The server needs at least 2 recorded data points. History is only recorded for entity IDs actively assigned in Settings → Sensors. After assigning a sensor, wait a few minutes for data to accumulate.</td></tr>
+      <tr><td>Custom sensors not appearing on the page</td><td>Ensure Settings → Sensors is saved with both the entity and the "Show Graph" toggle ON. Then restart the server to ensure the new settings are picked up by the history recording loop.</td></tr>
+    </table>
+
+    <h3>Checking the Server Console</h3>
+    <p>The server logs useful information to the console. If something isn't working as expected, check the terminal where <code>node server.js</code> is running:</p>
+    <ul style="padding-left:20px;margin:8px 0;font-size:14px;line-height:2;">
+      <li><code>✅ HA authenticated</code> — connection is working</li>
+      <li><code>📦 Loaded N entities</code> — entity list received from HA</li>
+      <li><code>LIGHT LOOP → entity | brightness=N</code> — lighting loop is running</li>
+      <li><code>💉 Dosing pump N — triggering via …</code> — scheduled dose fired</li>
+      <li><code>⏰ Schedule: entity → ON/OFF</code> — switch schedule triggered</li>
+      <li><code>🌡️ Sensor: entity → ON/OFF</code> — sensor automation triggered</li>
+    </ul>
+  </div>
+
+  <div class="guide-footer">
+    Aquarium Controller — User Guide &nbsp;·&nbsp; Node.js + Home Assistant
+  </div>
+
+</div>
+</body>
+</html>
