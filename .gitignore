@@ -1,0 +1,8 @@
+# Runtime config — contains HA credentials, never commit these
+config.json
+settings.json
+history.json
+ 
+# Node
+node_modules/
+npm-debug.log*
