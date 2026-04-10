@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Pumps</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root{--bg:#05070b;--card-bg:#0c111a;--accent:#1e88ff;--accent-soft:#0f4c81;--accent-cyan:#00c9d8;--accent-yellow:#ffb300;--accent-muted:#3f4b5f;--text-main:#ffffff;--text-sub:#a9b4c8;--radius-lg:18px;--radius-md:14px;--shadow-soft:0 14px 30px rgba(0,0,0,0.6);}
+    *{box-sizing:border-box;margin:0;padding:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Roboto",sans-serif;}
+    body{background:radial-gradient(circle at top,#101624 0,#05070b 55%,#020308 100%);color:var(--text-main);min-height:100vh;display:flex;justify-content:center;}
+    a{text-decoration:none;color:inherit;}
+    .app{width:100%;max-width:420px;padding:16px 16px 28px;}
+
+    .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
+    .header-left{display:flex;align-items:center;gap:10px;}
+    .ha-icon{width:32px;height:32px;border-radius:10px;background:radial-gradient(circle at 30% 0,#4fd3ff 0,#1e88ff 40%,#0b2a4a 100%);display:flex;align-items:center;justify-content:center;box-shadow:0 0 18px rgba(79,211,255,0.7);font-size:18px;color:#fff;}
+    .header-title{display:flex;flex-direction:column;}
+    .header-title h1{font-size:18px;letter-spacing:0.12em;text-transform:uppercase;}
+    .header-title span{font-size:11px;color:var(--text-sub);text-transform:uppercase;letter-spacing:0.18em;}
+    .header-gear{width:32px;height:32px;border-radius:999px;background:linear-gradient(135deg,#182233,#0b101a);display:flex;align-items:center;justify-content:center;box-shadow:0 0 10px rgba(0,0,0,0.7);color:var(--text-sub);font-size:18px;}
+    .section-label{font-size:11px;text-transform:uppercase;letter-spacing:0.18em;color:var(--text-sub);margin-bottom:10px;margin-top:20px;}
+
+    /* ── PUMP CARD ── */
+    .pump-card{background:radial-gradient(circle at top left,#1b2436 0,#0c111a 55%,#05070b 100%);border-radius:var(--radius-lg);padding:16px;box-shadow:var(--shadow-soft);margin-bottom:14px;position:relative;overflow:hidden;}
+    .pump-card::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at top right,rgba(0,201,216,0.13),transparent 55%);pointer-events:none;}
+
+    /* header row */
+    .pump-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;position:relative;z-index:1;}
+    .pump-left{display:flex;align-items:center;gap:12px;}
+    .pump-icon{width:36px;height:36px;border-radius:999px;background:linear-gradient(135deg,#00c9d8,#00acc1);display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 0 14px rgba(0,201,216,0.5);flex-shrink:0;}
+    .pump-name{font-size:15px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;}
+
+    /* on/off toggle */
+    .toggle{position:relative;width:44px;height:24px;cursor:pointer;}
+    .toggle input{opacity:0;width:0;height:0;position:absolute;}
+    .toggle-track{position:absolute;inset:0;border-radius:999px;background:#1a2333;transition:background 0.25s;}
+    .toggle input:checked~.toggle-track{background:var(--accent-cyan);box-shadow:0 0 10px rgba(0,201,216,0.5);}
+    .toggle-thumb{position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:999px;background:#fff;transition:transform 0.25s;box-shadow:0 2px 6px rgba(0,0,0,0.4);}
+    .toggle input:checked~.toggle-thumb{transform:translateX(20px);}
+    .toggle-wrap{display:flex;align-items:center;gap:8px;}
+    .toggle-label{font-size:11px;color:var(--text-sub);text-transform:uppercase;letter-spacing:0.1em;}
+
+    /* mode selector row */
+    .mode-row{display:flex;gap:6px;margin-bottom:14px;position:relative;z-index:1;}
+    .mode-btn{flex:1;padding:8px 2px;border:none;border-radius:10px;background:#111827;color:var(--text-sub);font-size:11px;text-transform:uppercase;letter-spacing:0.08em;cursor:pointer;transition:all 0.18s;display:flex;flex-direction:column;align-items:center;gap:4px;line-height:1;}
+    .mode-btn .mico{font-size:16px;}
+    .mode-btn.active{background:linear-gradient(135deg,#0c2540,#0c2a50);color:var(--accent-cyan);box-shadow:0 0 10px rgba(0,201,216,0.2);}
+
+    /* mode settings panels */
+    .mode-panel{display:none;position:relative;z-index:1;}
+    .mode-panel.visible{display:block;}
+
+    .field-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+    .field-lbl{font-size:11px;color:var(--text-sub);text-transform:uppercase;letter-spacing:0.12em;}
+    .field-val{font-size:20px;font-weight:600;color:var(--accent-cyan);}
+    .field-unit{font-size:11px;color:var(--text-sub);}
+
+    input[type="range"]{width:100%;height:4px;background:#1a2333;border-radius:2px;outline:none;-webkit-appearance:none;cursor:pointer;margin-bottom:10px;}
+    input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:999px;background:var(--accent-cyan);box-shadow:0 0 8px rgba(0,201,216,0.6);}
+
+    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
+    .input-group{display:flex;flex-direction:column;gap:4px;}
+    .input-group label{font-size:10px;color:var(--text-sub);text-transform:uppercase;letter-spacing:0.12em;}
+    .input-group input{padding:9px 10px;border-radius:10px;background:#111827;color:white;border:none;font-size:14px;width:100%;}
+
+    /* change rate buttons (random mode) */
+    .rate-row{display:flex;gap:8px;margin-bottom:10px;}
+    .rate-btn{flex:1;padding:8px 4px;border:none;border-radius:10px;background:#111827;color:var(--text-sub);font-size:11px;text-transform:uppercase;letter-spacing:0.1em;cursor:pointer;transition:all 0.18s;}
+    .rate-btn.active{background:linear-gradient(135deg,#0c2540,#0c3058);color:var(--accent-cyan);box-shadow:0 0 8px rgba(0,201,216,0.2);}
+
+    .save-btn{width:100%;padding:10px;border:none;border-radius:var(--radius-md);background:linear-gradient(135deg,#1e88ff,#0f4c81);color:white;font-size:13px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;cursor:pointer;margin-top:4px;box-shadow:0 6px 16px rgba(0,0,0,0.5);}
+
+    /* live speed indicator */
+    .flow-bar{height:4px;border-radius:2px;background:#1a2333;overflow:hidden;margin-bottom:14px;position:relative;z-index:1;}
+    .flow-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,#00c9d8,#1e88ff);transition:width 0.6s ease;box-shadow:0 0 8px rgba(0,201,216,0.5);}
+
+    .empty-msg{font-size:13px;color:var(--text-sub);text-align:center;padding:20px 0;}
+    .footer{margin-top:18px;font-size:11px;color:var(--text-sub);display:flex;justify-content:space-between;opacity:0.8;}
+    .footer-left{display:flex;align-items:center;}
+    .status-dot{width:8px;height:8px;border-radius:999px;margin-right:6px;transition:background 0.4s,box-shadow 0.4s;}
+    .status-dot.connected{background:#00c853;box-shadow:0 0 8px rgba(0,200,83,0.9);}
+    .status-dot.disconnected{background:#ef5350;box-shadow:0 0 8px rgba(239,83,80,0.6);}
+    .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:#0c111a;border-radius:20px;padding:10px 18px;color:white;opacity:0;transition:opacity 0.2s,transform 0.2s;pointer-events:none;display:flex;align-items:center;gap:8px;box-shadow:var(--shadow-soft);z-index:100;}
+    .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+    .toast-dot{width:6px;height:6px;border-radius:999px;}
+  </style>
+</head>
+<body>
+<div class="app">
+  <header class="header">
+    <div class="header-left">
+      <a href="index.html" class="ha-icon">⌂</a>
+      <div class="header-title"><h1>PUMPS</h1><span>flow & circulation</span></div>
+    </div>
+    <a href="settings.html" class="header-gear">⚙</a>
+  </header>
+
+  <div class="section-label">Circulation Pumps</div>
+  <div id="pump-container"><div class="empty-msg">Loading…</div></div>
+
+  <div class="toast" id="toast"><div class="toast-dot"></div><span id="toast-text"></span></div>
+
+  <footer class="footer">
+    <div class="footer-left">
+      <span class="status-dot disconnected" id="conn-dot"></span>
+      <span id="conn-label">Connecting…</span>
+    </div>
+    <span>Last sync: <span id="last-sync">—</span></span>
+  </footer>
+</div>
+
+<script>
+  let PUMPS = [];
+
+  // ── LOAD ──────────────────────────────────────────────────────────────────
+  async function loadPumps() {
+    try {
+      const [cfg, data] = await Promise.all([
+        fetch("/api/config").then(r => r.json()),
+        fetch("/api/pumps").then(r => r.json()),
+      ]);
+      updateConn(cfg);
+      PUMPS = data;
+      renderPumps();
+    } catch {
+      updateConn(null);
+      document.getElementById("pump-container").innerHTML =
+        `<div class="empty-msg">Configure pumps in <a href="settings.html" style="color:var(--accent)">Settings →</a></div>`;
+    }
+  }
+
+  function updateConn(cfg) {
+    const dot = document.getElementById("conn-dot");
+    const lbl = document.getElementById("conn-label");
+    if (cfg?.connected) { dot.className = "status-dot connected"; lbl.textContent = "Connected to Home Assistant"; }
+    else { dot.className = "status-dot disconnected"; lbl.textContent = cfg?.host ? "Disconnected — retrying…" : "Not configured"; }
+  }
+
+  // ── RENDER ─────────────────────────────────────────────────────────────────
+  function renderPumps() {
+    const c = document.getElementById("pump-container");
+    c.innerHTML = "";
+    if (!PUMPS.length) {
+      c.innerHTML = `<div class="empty-msg">No pumps configured. <a href="settings.html" style="color:var(--accent)">Go to Settings →</a></div>`;
+      return;
+    }
+    PUMPS.forEach(p => buildCard(p, c));
+    syncTime();
+  }
+
+  function buildCard(p, container) {
+    const isOn   = p.state === "on";
+    const mode   = p.modeConfig?.mode || "constant";
+    const mc     = p.modeConfig || {};
+    const liveSpd = p.liveSpeed ?? 0;
+
+    const card = document.createElement("div");
+    card.className = "pump-card";
+    card.id = `pump-card-${p.id}`;
+
+    card.innerHTML = `
+      <!-- HEADER: name + on/off -->
+      <div class="pump-header">
+        <div class="pump-left">
+          <div class="pump-icon">🌊</div>
+          <div class="pump-name">${p.name}</div>
+        </div>
+        <div class="toggle-wrap">
+          <span class="toggle-label" id="pump-status-${p.id}">${isOn ? "ON" : "OFF"}</span>
+          <label class="toggle">
+            <input type="checkbox" id="pump-cb-${p.id}" ${isOn ? "checked" : ""}>
+            <div class="toggle-track"></div>
+            <div class="toggle-thumb"></div>
+          </label>
+        </div>
+      </div>
+
+      <!-- LIVE SPEED BAR -->
+      <div class="flow-bar">
+        <div class="flow-fill" id="pump-flow-${p.id}" style="width:${liveSpd}%"></div>
+      </div>
+
+      <!-- MODE SELECTOR -->
+      <div class="mode-row" id="pump-modes-${p.id}">
+        <button class="mode-btn ${mode==="constant"?"active":""}" data-mode="constant">
+          <span class="mico">〰️</span>Constant
+        </button>
+        <button class="mode-btn ${mode==="wave"?"active":""}" data-mode="wave">
+          <span class="mico">🌊</span>Wave
+        </button>
+        <button class="mode-btn ${mode==="pulse"?"active":""}" data-mode="pulse">
+          <span class="mico">💓</span>Pulse
+        </button>
+        <button class="mode-btn ${mode==="random"?"active":""}" data-mode="random">
+          <span class="mico">🎲</span>Random
+        </button>
+      </div>
+
+      <!-- CONSTANT PANEL -->
+      <div class="mode-panel ${mode==="constant"?"visible":""}" id="panel-constant-${p.id}">
+        <div class="field-row">
+          <span class="field-lbl">Speed</span>
+          <div><span class="field-val" id="const-val-${p.id}">${mc.speed ?? 75}</span><span class="field-unit"> %</span></div>
+        </div>
+        <input type="range" min="0" max="100" value="${mc.speed ?? 75}" id="const-slider-${p.id}">
+        <button class="save-btn" data-pump="${p.id}" data-action="save">💾 Save</button>
+      </div>
+
+      <!-- WAVE PANEL -->
+      <div class="mode-panel ${mode==="wave"?"visible":""}" id="panel-wave-${p.id}">
+        <div class="two-col">
+          <div class="input-group">
+            <label>Min Flow %</label>
+            <input type="number" id="wave-min-${p.id}" min="0" max="100" value="${mc.minFlow ?? 30}">
+          </div>
+          <div class="input-group">
+            <label>Max Flow %</label>
+            <input type="number" id="wave-max-${p.id}" min="0" max="100" value="${mc.maxFlow ?? 100}">
+          </div>
+        </div>
+        <div class="input-group" style="margin-bottom:10px;">
+          <label>Wave Period (seconds)</label>
+          <input type="number" id="wave-period-${p.id}" min="5" max="3600" value="${mc.period ?? 60}">
+        </div>
+        <button class="save-btn" data-pump="${p.id}" data-action="save">💾 Save</button>
+      </div>
+
+      <!-- PULSE PANEL -->
+      <div class="mode-panel ${mode==="pulse"?"visible":""}" id="panel-pulse-${p.id}">
+        <div class="two-col">
+          <div class="input-group">
+            <label>Min Flow %</label>
+            <input type="number" id="pulse-min-${p.id}" min="0" max="100" value="${mc.minFlow ?? 20}">
+          </div>
+          <div class="input-group">
+            <label>Max Flow %</label>
+            <input type="number" id="pulse-max-${p.id}" min="0" max="100" value="${mc.maxFlow ?? 100}">
+          </div>
+        </div>
+        <div class="field-row" style="margin-bottom:4px;">
+          <span class="field-lbl">Pulse Length</span>
+          <div><span class="field-val" id="pulse-len-val-${p.id}">${mc.pulseLength ?? 1.0}</span><span class="field-unit"> s</span></div>
+        </div>
+        <input type="range" min="0.5" max="3" step="0.1" value="${mc.pulseLength ?? 1.0}" id="pulse-len-slider-${p.id}">
+        <div class="input-group" style="margin-bottom:10px;">
+          <label>Delay between pulses (seconds)</label>
+          <input type="number" id="pulse-delay-${p.id}" min="0.5" max="60" step="0.5" value="${mc.delay ?? 2}">
+        </div>
+        <button class="save-btn" data-pump="${p.id}" data-action="save">💾 Save</button>
+      </div>
+
+      <!-- RANDOM PANEL -->
+      <div class="mode-panel ${mode==="random"?"visible":""}" id="panel-random-${p.id}">
+        <div class="two-col" style="margin-bottom:10px;">
+          <div class="input-group">
+            <label>Min Flow %</label>
+            <input type="number" id="rand-min-${p.id}" min="0" max="100" value="${mc.minFlow ?? 20}">
+          </div>
+          <div class="input-group">
+            <label>Max Flow %</label>
+            <input type="number" id="rand-max-${p.id}" min="0" max="100" value="${mc.maxFlow ?? 100}">
+          </div>
+        </div>
+        <div class="field-lbl" style="margin-bottom:8px;">Change Rate</div>
+        <div class="rate-row" id="rate-row-${p.id}">
+          <button class="rate-btn ${(mc.changeRate||"medium")==="slow"?"active":""}" data-rate="slow">Slow</button>
+          <button class="rate-btn ${(mc.changeRate||"medium")==="medium"?"active":""}" data-rate="medium">Medium</button>
+          <button class="rate-btn ${(mc.changeRate||"medium")==="fast"?"active":""}" data-rate="fast">Fast</button>
+        </div>
+        <button class="save-btn" data-pump="${p.id}" data-action="save">💾 Save</button>
+      </div>
+    `;
+
+    container.appendChild(card);
+
+    // ── Event listeners ──
+
+    // On/off toggle
+    card.querySelector(`#pump-cb-${p.id}`).addEventListener("change", function() {
+      const on = this.checked;
+      document.getElementById(`pump-status-${p.id}`).textContent = on ? "ON" : "OFF";
+      fetch(`/api/pumps/toggle?pump=${p.id}&state=${on?"on":"off"}`, { method:"POST" });
+    });
+
+    // Mode buttons
+    card.querySelectorAll(".mode-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const newMode = btn.dataset.mode;
+        card.querySelectorAll(".mode-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        card.querySelectorAll(".mode-panel").forEach(panel => panel.classList.remove("visible"));
+        card.querySelector(`#panel-${newMode}-${p.id}`).classList.add("visible");
+      });
+    });
+
+    // Constant speed slider live display
+    const constSlider = card.querySelector(`#const-slider-${p.id}`);
+    constSlider.addEventListener("input", () => {
+      document.getElementById(`const-val-${p.id}`).textContent = constSlider.value;
+    });
+
+    // Pulse length slider live display
+    const pulseSlider = card.querySelector(`#pulse-len-slider-${p.id}`);
+    pulseSlider.addEventListener("input", () => {
+      document.getElementById(`pulse-len-val-${p.id}`).textContent = parseFloat(pulseSlider.value).toFixed(1);
+    });
+
+    // Change rate buttons (random)
+    card.querySelectorAll(`#rate-row-${p.id} .rate-btn`).forEach(btn => {
+      btn.addEventListener("click", () => {
+        card.querySelectorAll(`#rate-row-${p.id} .rate-btn`).forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+      });
+    });
+
+    // Save button
+    card.querySelector(`.save-btn[data-pump="${p.id}"]`).addEventListener("click", () => saveMode(p.id, card));
+  }
+
+  // ── SAVE MODE ─────────────────────────────────────────────────────────────
+  async function saveMode(id, card) {
+    const activeMode = card.querySelector(".mode-btn.active")?.dataset.mode || "constant";
+    let config = { mode: activeMode };
+
+    if (activeMode === "constant") {
+      config.speed = parseInt(card.querySelector(`#const-slider-${id}`).value);
+    } else if (activeMode === "wave") {
+      config.minFlow  = parseInt(card.querySelector(`#wave-min-${id}`).value);
+      config.maxFlow  = parseInt(card.querySelector(`#wave-max-${id}`).value);
+      config.period   = parseInt(card.querySelector(`#wave-period-${id}`).value);
+    } else if (activeMode === "pulse") {
+      config.minFlow      = parseInt(card.querySelector(`#pulse-min-${id}`).value);
+      config.maxFlow      = parseInt(card.querySelector(`#pulse-max-${id}`).value);
+      config.pulseLength  = parseFloat(card.querySelector(`#pulse-len-slider-${id}`).value);
+      config.delay        = parseFloat(card.querySelector(`#pulse-delay-${id}`).value);
+    } else if (activeMode === "random") {
+      config.minFlow    = parseInt(card.querySelector(`#rand-min-${id}`).value);
+      config.maxFlow    = parseInt(card.querySelector(`#rand-max-${id}`).value);
+      config.changeRate = card.querySelector(`#rate-row-${id} .rate-btn.active`)?.dataset.rate || "medium";
+    }
+
+    await fetch(`/api/pumps/mode`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pump: id, config }),
+    });
+
+    // Update local pump data
+    const pump = PUMPS.find(p => p.id === id);
+    if (pump) pump.modeConfig = config;
+
+    showToast("Saved");
+  }
+
+  // ── TOAST ─────────────────────────────────────────────────────────────────
+  function showToast(msg, isError = false) {
+    const t = document.getElementById("toast");
+    document.getElementById("toast-text").textContent = msg;
+    t.querySelector(".toast-dot").style.background = isError ? "#ef5350" : "#00c853";
+    t.classList.add("show");
+    setTimeout(() => t.classList.remove("show"), 2000);
+  }
+
+  function syncTime() {
+    const now = new Date();
+    document.getElementById("last-sync").textContent =
+      `${now.getHours()}:${String(now.getMinutes()).padStart(2,"0")}`;
+  }
+
+  // ── POLL ──────────────────────────────────────────────────────────────────
+  async function pollPumps() {
+    try {
+      const [cfg, data] = await Promise.all([
+        fetch("/api/config").then(r => r.json()),
+        fetch("/api/pumps").then(r => r.json()),
+      ]);
+      updateConn(cfg);
+      data.forEach(p => {
+        // Update on/off state
+        const cb     = document.getElementById(`pump-cb-${p.id}`);
+        const status = document.getElementById(`pump-status-${p.id}`);
+        if (cb)     cb.checked      = p.state === "on";
+        if (status) status.textContent = p.state === "on" ? "ON" : "OFF";
+        // Update live speed bar
+        const fill = document.getElementById(`pump-flow-${p.id}`);
+        if (fill) fill.style.width = (p.liveSpeed ?? 0) + "%";
+        // Update local pump data
+        const pump = PUMPS.find(pp => pp.id === p.id);
+        if (pump) { pump.state = p.state; pump.liveSpeed = p.liveSpeed; }
+      });
+      syncTime();
+    } catch {}
+  }
+
+  loadPumps();
+  setInterval(pollPumps, 5000);
+</script>
+</body>
+</html>

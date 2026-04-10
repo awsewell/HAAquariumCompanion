@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Switches</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root { --bg:#05070b;--card-bg:#0c111a;--accent:#1e88ff;--accent-soft:#0f4c81;--accent-cyan:#00c9d8;--accent-yellow:#ffb300;--accent-muted:#3f4b5f;--text-main:#ffffff;--text-sub:#a9b4c8;--radius-lg:18px;--radius-md:14px;--shadow-soft:0 14px 30px rgba(0,0,0,0.6); }
+    *{box-sizing:border-box;margin:0;padding:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Roboto",sans-serif;}
+    body{background:radial-gradient(circle at top,#101624 0,#05070b 55%,#020308 100%);color:var(--text-main);min-height:100vh;display:flex;justify-content:center;}
+    a{text-decoration:none;color:inherit;}
+    .app{width:100%;max-width:420px;padding:16px 16px 24px;}
+    .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
+    .header-left{display:flex;align-items:center;gap:10px;}
+    .ha-icon{width:32px;height:32px;border-radius:10px;background:radial-gradient(circle at 30% 0,#4fd3ff 0,#1e88ff 40%,#0b2a4a 100%);display:flex;align-items:center;justify-content:center;box-shadow:0 0 18px rgba(79,211,255,0.7);font-size:18px;color:#fff;}
+    .header-title{display:flex;flex-direction:column;}
+    .header-title h1{font-size:18px;letter-spacing:0.12em;text-transform:uppercase;}
+    .header-title span{font-size:11px;color:var(--text-sub);text-transform:uppercase;letter-spacing:0.18em;}
+    .header-gear{width:32px;height:32px;border-radius:999px;background:linear-gradient(135deg,#182233,#0b101a);display:flex;align-items:center;justify-content:center;box-shadow:0 0 10px rgba(0,0,0,0.7);color:var(--text-sub);font-size:18px;}
+    .section-label{font-size:11px;text-transform:uppercase;letter-spacing:0.18em;color:var(--text-sub);margin-bottom:10px;margin-top:20px;}
+    .switch-card{background:radial-gradient(circle at top left,#1b2436 0,#0c111a 55%,#05070b 100%);border-radius:var(--radius-lg);padding:16px;box-shadow:var(--shadow-soft);margin-bottom:14px;position:relative;overflow:hidden;}
+    .switch-card::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at top right,rgba(239,83,80,0.10),transparent 55%);pointer-events:none;transition:background 0.4s;}
+    .switch-card.on::before{background:radial-gradient(circle at top right,rgba(0,200,83,0.10),transparent 55%);}
+    .switch-card.sensor-controlled::before{background:radial-gradient(circle at top right,rgba(30,136,255,0.12),transparent 55%);}
+    .switch-row{display:flex;align-items:center;justify-content:space-between;position:relative;z-index:1;}
+    .switch-left{display:flex;align-items:center;gap:12px;}
+    .switch-icon-wrap{width:40px;height:40px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:20px;transition:all 0.3s;flex-shrink:0;}
+    .switch-icon-wrap.off{background:linear-gradient(135deg,#1a2435,#0f1620);}
+    .switch-name{font-size:15px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;}
+    .switch-sub{font-size:11px;color:var(--text-sub);margin-top:2px;}
+    .big-toggle{position:relative;width:52px;height:28px;cursor:pointer;display:block;flex-shrink:0;}
+    .big-toggle input{opacity:0;width:0;height:0;position:absolute;}
+    .big-toggle-track{position:absolute;inset:0;border-radius:999px;background:#1a2333;transition:background 0.25s;}
+    .big-toggle input:checked~.big-toggle-track{background:#00c853;box-shadow:0 0 12px rgba(0,200,83,0.5);}
+    .big-toggle-thumb{position:absolute;top:4px;left:4px;width:20px;height:20px;border-radius:999px;background:#fff;transition:transform 0.25s;box-shadow:0 2px 6px rgba(0,0,0,0.5);}
+    .big-toggle input:checked~.big-toggle-thumb{transform:translateX(24px);}
+    .big-toggle.disabled{opacity:0.35;pointer-events:none;}
+    .card-divider{height:1px;background:rgba(255,255,255,0.05);margin:14px 0;position:relative;z-index:1;}
+    .stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;position:relative;z-index:1;}
+    .stat-item{text-align:center;}
+    .stat-val{font-size:15px;font-weight:600;}
+    .stat-lbl{font-size:10px;color:var(--text-sub);text-transform:uppercase;letter-spacing:0.1em;margin-top:2px;}
+    .mode-tabs{display:flex;gap:6px;position:relative;z-index:1;margin-bottom:14px;}
+    .mode-tab{flex:1;padding:7px 4px;border:none;border-radius:10px;background:#111827;color:var(--text-sub);font-size:11px;text-transform:uppercase;letter-spacing:0.1em;cursor:pointer;transition:all 0.2s;text-align:center;}
+    .mode-tab.active-manual{background:linear-gradient(135deg,#1a2435,#1f3050);color:#fff;}
+    .mode-tab.active-schedule{background:linear-gradient(135deg,#0d2540,#0c3058);color:var(--accent-cyan);box-shadow:0 0 10px rgba(0,201,216,0.2);}
+    .mode-tab.active-sensor{background:linear-gradient(135deg,#0c1e40,#0c2a5a);color:var(--accent);box-shadow:0 0 10px rgba(30,136,255,0.25);}
+    .auto-panel{display:none;position:relative;z-index:1;}
+    .auto-panel.visible{display:block;}
+    .manual-hint{font-size:12px;color:var(--text-sub);padding:4px 0;}
+    .time-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+    .time-field{display:flex;flex-direction:column;gap:4px;}
+    .field-label{font-size:10px;color:var(--text-sub);text-transform:uppercase;letter-spacing:0.1em;}
+    input[type="time"],input[type="number"],select{width:100%;padding:9px 10px;border-radius:10px;background:#111827;color:white;border:none;font-size:13px;}
+    select option{background:#111827;}
+    .sensor-panel-grid{display:flex;flex-direction:column;gap:12px;}
+    .sensor-select-row{display:flex;flex-direction:column;gap:4px;}
+    .trigger-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+    .trigger-btn{padding:10px 6px;border:none;border-radius:10px;background:#111827;color:var(--text-sub);font-size:12px;text-transform:uppercase;letter-spacing:0.08em;cursor:pointer;transition:all 0.2s;text-align:center;display:flex;flex-direction:column;align-items:center;gap:4px;}
+    .trigger-btn .trigger-icon{font-size:18px;}
+    .trigger-btn .trigger-desc{font-size:9px;letter-spacing:0.06em;margin-top:1px;}
+    .trigger-btn.active-low{background:linear-gradient(135deg,#0c1e40,#0c2a5a);color:#60a5fa;box-shadow:0 0 10px rgba(96,165,250,0.2);}
+    .trigger-btn.active-low .trigger-desc{color:#60a5fa;}
+    .trigger-btn.active-high{background:linear-gradient(135deg,#2a0e0e,#3d1010);color:#f87171;box-shadow:0 0 10px rgba(248,113,113,0.2);}
+    .trigger-btn.active-high .trigger-desc{color:#f87171;}
+    .setpoint-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+    .setpoint-field{display:flex;flex-direction:column;gap:4px;}
+    .hyst-vis{background:#0a0f1a;border-radius:12px;padding:12px 14px;}
+    .hyst-title{font-size:10px;color:var(--text-sub);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:10px;}
+    .hyst-bar-wrap{position:relative;height:28px;}
+    .hyst-track{position:absolute;top:10px;left:0;right:0;height:8px;background:#1a2333;border-radius:4px;}
+    .hyst-zone{position:absolute;top:10px;height:8px;border-radius:4px;transition:left 0.3s,width 0.3s;}
+    .hyst-on-marker,.hyst-off-marker{position:absolute;top:0;width:2px;height:28px;border-radius:1px;transition:left 0.3s;}
+    .hyst-on-marker{background:#60a5fa;}
+    .hyst-off-marker{background:#f87171;}
+    .hyst-labels{display:flex;justify-content:space-between;margin-top:8px;}
+    .hyst-label{font-size:10px;display:flex;flex-direction:column;align-items:center;gap:2px;}
+    .hyst-label .hyst-lv{font-weight:700;font-size:13px;}
+    .hyst-label .hyst-lk{color:var(--text-sub);text-transform:uppercase;letter-spacing:0.08em;font-size:9px;}
+    .hyst-label.on-lbl .hyst-lv{color:#60a5fa;}
+    .hyst-label.off-lbl .hyst-lv{color:#f87171;}
+    .hyst-label.set-lbl .hyst-lv{color:var(--text-sub);}
+    .sensor-live-row{display:flex;align-items:center;justify-content:space-between;}
+    .sensor-live-badge{display:flex;align-items:center;gap:8px;background:#111827;border-radius:10px;padding:8px 12px;}
+    .sensor-live-dot{width:6px;height:6px;border-radius:999px;background:#00c853;box-shadow:0 0 6px rgba(0,200,83,0.8);flex-shrink:0;}
+    .sensor-live-val{font-size:16px;font-weight:700;}
+    .sensor-live-lbl{font-size:10px;color:var(--text-sub);margin-top:1px;}
+    .auto-status-pill{font-size:10px;padding:5px 12px;border-radius:999px;text-transform:uppercase;letter-spacing:0.1em;font-weight:600;}
+    .pill-waiting{background:rgba(255,179,0,0.15);color:var(--accent-yellow);}
+    .pill-triggered{background:rgba(0,200,83,0.15);color:#00c853;}
+    .pill-holding{background:rgba(30,136,255,0.15);color:var(--accent);}
+    .summary-card{background:radial-gradient(circle at top left,#1b2436 0,#0c111a 55%,#05070b 100%);border-radius:var(--radius-lg);padding:16px;box-shadow:var(--shadow-soft);margin-bottom:14px;position:relative;overflow:hidden;}
+    .summary-card::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at top right,rgba(30,136,255,0.12),transparent 55%);pointer-events:none;}
+    .summary-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;position:relative;z-index:1;}
+    .summary-box{background:#0a0f1a;border-radius:12px;padding:12px;text-align:center;}
+    .summary-val{font-size:22px;font-weight:700;}
+    .summary-lbl{font-size:10px;color:var(--text-sub);text-transform:uppercase;letter-spacing:0.1em;margin-top:4px;}
+    .action-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+    .action-btn{padding:12px;border:none;border-radius:var(--radius-md);font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;cursor:pointer;transition:opacity 0.2s;}
+    .action-btn.all-on{background:linear-gradient(135deg,#00c853,#00961e);color:#fff;box-shadow:0 0 16px rgba(0,200,83,0.25);}
+    .action-btn.all-off{background:linear-gradient(135deg,#1a2333,#0f1620);color:var(--text-sub);}
+    .action-btn:hover{opacity:0.85;}
+    .empty-msg{font-size:13px;color:var(--text-sub);text-align:center;padding:20px 0;}
+    .footer{margin-top:18px;font-size:11px;color:var(--text-sub);display:flex;justify-content:space-between;opacity:0.8;}
+    .footer-left{display:flex;align-items:center;}
+    .status-dot{width:8px;height:8px;border-radius:999px;background:#00c853;box-shadow:0 0 8px rgba(0,200,83,0.9);margin-right:6px;}
+  </style>
+</head>
+<body>
+<div class="app">
+  <header class="header">
+    <div class="header-left">
+      <a href="index.html" class="ha-icon">⌂</a>
+      <div class="header-title"><h1>SWITCHES</h1><span>power & automation</span></div>
+    </div>
+    <a href="settings.html" class="header-gear">⚙</a>
+  </header>
+
+  <div class="section-label">Quick Actions</div>
+  <div class="action-row" style="margin-bottom:4px;">
+    <button class="action-btn all-on"  onclick="setAll(true)">⏻ All On</button>
+    <button class="action-btn all-off" onclick="setAll(false)">⏻ All Off</button>
+  </div>
+
+  <div class="section-label">Outlets</div>
+  <div id="switch-container"></div>
+
+  <div class="section-label">Power Summary</div>
+  <div class="summary-card">
+    <div class="summary-grid">
+      <div class="summary-box"><div class="summary-val" style="color:var(--accent-yellow)" id="total-watts">—</div><div class="summary-lbl">Total Draw</div></div>
+      <div class="summary-box"><div class="summary-val" style="color:#00c853" id="active-count">—</div><div class="summary-lbl">Active</div></div>
+      <div class="summary-box"><div class="summary-val" style="color:var(--text-sub)" id="est-month">—</div><div class="summary-lbl">Est. / Month</div></div>
+      <div class="summary-box"><div class="summary-val" style="color:var(--accent)">—</div><div class="summary-lbl">kWh Today</div></div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <div class="footer-left"><span class="status-dot"></span><span>Connected to Home Assistant</span></div>
+    <span id="last-sync">—</span>
+  </footer>
+</div>
+
+<script>
+  /* ── STATE ─────────────────────────────── */
+  let SWITCHES      = [];   // loaded from /api/switches
+  let SENSORS       = [];   // loaded from /api/settings
+  const swState     = JSON.parse(localStorage.getItem("swState") || "{}");
+  const live        = {};
+
+  /* ── LOAD CONFIG ───────────────────────── */
+  async function loadConfig() {
+    try {
+      const [swData, settings] = await Promise.all([
+        fetch("/api/switches").then(r => r.json()),
+        fetch("/api/settings").then(r => r.json()),
+      ]);
+
+      // Build SWITCHES from backend (these have names/entities from settings)
+      SWITCHES = swData.map(sw => ({
+        id:     sw.id,
+        name:   sw.name   || `Switch ${sw.id}`,
+        entity: sw.entity || "",
+        icon:   sw.icon   || "⏻",
+        iconBg: iconBgFor(sw.icon || "⏻"),
+        watts:  sw.watts  || 0,
+      }));
+
+      // Build sensor list from settings for sensor-mode dropdowns
+      const sens = settings?.sensors || {};
+      SENSORS = Object.entries(sens).map(([key, cfg]) => {
+        const labels = { temperature:"Temperature", ph:"pH", orp:"ORP", kh:"KH" };
+        const units  = { temperature:"°C", ph:"", orp:"mV", kh:"dKH" };
+        return { value: cfg.primary || "", label: labels[key] || key, unit: units[key] || "" };
+      }).filter(s => s.value);
+
+      // Initialise state for any new switches not yet in localStorage
+      SWITCHES.forEach(sw => {
+        if (!swState[sw.id]) swState[sw.id] = {
+          on: false, mode:"manual",
+          schedule:{ onAt:"08:00", offAt:"22:00" },
+          sensor:{ entity: SENSORS[0]?.value || "", triggerType:"low", setpoint:26, variance:1 },
+        };
+        // Sync state from HA if available
+        if (swData.find(s=>s.id===sw.id)?.state === "on") swState[sw.id].on = true;
+        if (swData.find(s=>s.id===sw.id)?.state === "off") swState[sw.id].on = false;
+      });
+
+      renderAll();
+    } catch (e) {
+      console.error("Failed to load switch config:", e);
+      document.getElementById("switch-container").innerHTML =
+        `<div class="empty-msg">Configure switches in <a href="settings.html" style="color:var(--accent)">Settings →</a></div>`;
+    }
+  }
+
+  function iconBgFor(icon) {
+    const map = { "🔥":"linear-gradient(135deg,#ef5350,#d32f2f)", "🫧":"linear-gradient(135deg,#1e88ff,#0b47a1)", "☀️":"linear-gradient(135deg,#a855f7,#7c3aed)", "💧":"linear-gradient(135deg,#4db6ac,#00897b)", "⏻":"linear-gradient(135deg,#3f4b5f,#2a3448)" };
+    return map[icon] || "linear-gradient(135deg,#3f4b5f,#2a3448)";
+  }
+
+  /* ── RENDER ────────────────────────────── */
+  function renderAll() {
+    const c = document.getElementById("switch-container");
+    c.innerHTML = "";
+    if (SWITCHES.length === 0) {
+      c.innerHTML = `<div class="empty-msg">No switches configured. <a href="settings.html" style="color:var(--accent)">Go to Settings →</a></div>`;
+      return;
+    }
+    SWITCHES.forEach(sw => c.appendChild(buildCard(sw)));
+    updateSummary();
+  }
+
+  function buildCard(sw) {
+    const s   = swState[sw.id];
+    const div = document.createElement("div");
+    div.className = `switch-card${s.on?" on":""}${s.mode==="sensor"?" sensor-controlled":""}`;
+    div.id = `sw${sw.id}-card`;
+    div.innerHTML = `
+      <div class="switch-row">
+        <div class="switch-left">
+          <div class="switch-icon-wrap ${s.on?"on":"off"}" id="sw${sw.id}-icon"
+               style="${s.on?"background:"+sw.iconBg+";box-shadow:0 0 16px rgba(0,200,83,0.4);":""}">
+            ${sw.icon}
+          </div>
+          <div>
+            <div class="switch-name">${sw.name}</div>
+            <div class="switch-sub">${sw.entity}</div>
+          </div>
+        </div>
+        <label class="big-toggle${s.mode==="sensor"?" disabled":""}" id="sw${sw.id}-toggle">
+          <input type="checkbox" ${s.on?"checked":""} onchange="manualToggle(${sw.id},this.checked)">
+          <div class="big-toggle-track"></div>
+          <div class="big-toggle-thumb"></div>
+        </label>
+      </div>
+      <div class="card-divider"></div>
+      <div class="stats-row">
+        <div class="stat-item"><div class="stat-val" id="sw${sw.id}-stv" style="color:${s.on?"#00c853":"#ef5350"}">${s.on?"ON":"OFF"}</div><div class="stat-lbl">State</div></div>
+        <div class="stat-item"><div class="stat-val" style="color:var(--accent-yellow)">${sw.watts}W</div><div class="stat-lbl">Power</div></div>
+        <div class="stat-item"><div class="stat-val" id="sw${sw.id}-mstat">${modeLabel(s.mode)}</div><div class="stat-lbl">Mode</div></div>
+      </div>
+      <div class="card-divider"></div>
+      <div class="mode-tabs">
+        <button class="mode-tab${s.mode==="manual"?" active-manual":""}"   onclick="setMode(${sw.id},'manual')">Manual</button>
+        <button class="mode-tab${s.mode==="schedule"?" active-schedule":""}" onclick="setMode(${sw.id},'schedule')">Schedule</button>
+        <button class="mode-tab${s.mode==="sensor"?" active-sensor":""}"   onclick="setMode(${sw.id},'sensor')">Sensor</button>
+      </div>
+      <!-- MANUAL -->
+      <div class="auto-panel${s.mode==="manual"?" visible":""}" id="sw${sw.id}-panel-manual">
+        <div class="manual-hint">Controlled manually via the toggle above.</div>
+      </div>
+      <!-- SCHEDULE -->
+      <div class="auto-panel${s.mode==="schedule"?" visible":""}" id="sw${sw.id}-panel-schedule">
+        <div class="time-row">
+          <div class="time-field"><span class="field-label">On At</span><input type="time" id="sw${sw.id}-on-at" value="${s.schedule.onAt}" onchange="saveSchedule(${sw.id})"></div>
+          <div class="time-field"><span class="field-label">Off At</span><input type="time" id="sw${sw.id}-off-at" value="${s.schedule.offAt}" onchange="saveSchedule(${sw.id})"></div>
+        </div>
+      </div>
+      <!-- SENSOR -->
+      <div class="auto-panel${s.mode==="sensor"?" visible":""}" id="sw${sw.id}-panel-sensor">
+        <div class="sensor-panel-grid">
+          <div class="sensor-select-row">
+            <span class="field-label">Sensor</span>
+            <select id="sw${sw.id}-sensor-entity" onchange="updateSensorCfg(${sw.id})">
+              ${SENSORS.length ? SENSORS.map(sen=>`<option value="${sen.value}"${s.sensor.entity===sen.value?" selected":""}>${sen.label}${sen.unit?" ("+sen.unit+")":""}</option>`).join("") : `<option value="">No sensors configured in Settings</option>`}
+            </select>
+          </div>
+          <div>
+            <span class="field-label" style="display:block;margin-bottom:6px;">Trigger Type</span>
+            <div class="trigger-row">
+              <button class="trigger-btn${s.sensor.triggerType==="low"?" active-low":""}" id="sw${sw.id}-trig-low" onclick="setTrigger(${sw.id},'low')">
+                <span class="trigger-icon">🔵</span><span>Low</span><span class="trigger-desc">ON when below setpoint</span>
+              </button>
+              <button class="trigger-btn${s.sensor.triggerType==="high"?" active-high":""}" id="sw${sw.id}-trig-high" onclick="setTrigger(${sw.id},'high')">
+                <span class="trigger-icon">🔴</span><span>High</span><span class="trigger-desc">ON when above setpoint</span>
+              </button>
+            </div>
+          </div>
+          <div class="setpoint-row">
+            <div class="setpoint-field"><span class="field-label">Setpoint</span><input type="number" id="sw${sw.id}-setpoint" step="0.1" value="${s.sensor.setpoint}" oninput="updateSensorCfg(${sw.id})"></div>
+            <div class="setpoint-field"><span class="field-label">Variance (±½)</span><input type="number" id="sw${sw.id}-variance" step="0.1" min="0" value="${s.sensor.variance}" oninput="updateSensorCfg(${sw.id})"></div>
+          </div>
+          <div class="hyst-vis" id="sw${sw.id}-hyst"></div>
+          <div class="sensor-live-row">
+            <div class="sensor-live-badge">
+              <div class="sensor-live-dot"></div>
+              <div><div class="sensor-live-val" id="sw${sw.id}-live">—</div><div class="sensor-live-lbl">Live Reading</div></div>
+            </div>
+            <div class="auto-status-pill pill-waiting" id="sw${sw.id}-pill">Waiting</div>
+          </div>
+        </div>
+      </div>
+    `;
+    if (s.mode === "sensor") setTimeout(() => { renderHyst(sw.id); updateLive(sw.id); }, 0);
+    return div;
+  }
+
+  /* ── HELPERS ────────────────────────────── */
+  function modeLabel(m) { return {manual:"Manual",schedule:"Schedule",sensor:"Auto"}[m]||m; }
+
+  function setMode(id, mode) {
+    swState[id].mode = mode;
+    const card = document.getElementById(`sw${id}-card`);
+    card.querySelectorAll(".mode-tab").forEach((t,i)=>{ t.className=`mode-tab${mode===["manual","schedule","sensor"][i]?" active-"+["manual","schedule","sensor"][i]:""}` });
+    ["manual","schedule","sensor"].forEach(m=>{ document.getElementById(`sw${id}-panel-${m}`)?.classList.toggle("visible",m===mode); });
+    document.getElementById(`sw${id}-toggle`)?.classList.toggle("disabled", mode==="sensor");
+    card.classList.toggle("sensor-controlled", mode==="sensor");
+    document.getElementById(`sw${id}-mstat`).textContent = modeLabel(mode);
+    if (mode==="sensor") { renderHyst(id); updateLive(id); }
+    saveState(); postConfig(id);
+  }
+
+  function manualToggle(id, on) {
+    if (swState[id].mode==="sensor") return;
+    swState[id].on = on; applyState(id, on); saveState();
+    fetch(`/api/switches/toggle?switch=${id}&state=${on?"on":"off"}`,{method:"POST"});
+  }
+
+  function applyState(id, on) {
+    const card = document.getElementById(`sw${id}-card`); if (!card) return;
+    const sw   = SWITCHES.find(s=>s.id===id);
+    card.classList.toggle("on", on);
+    const icon = document.getElementById(`sw${id}-icon`);
+    if (icon && sw) { icon.style.background=on?sw.iconBg:""; icon.style.boxShadow=on?"0 0 16px rgba(0,200,83,0.4)":""; icon.classList.toggle("off",!on); }
+    const sv = document.getElementById(`sw${id}-stv`);
+    if (sv) { sv.textContent=on?"ON":"OFF"; sv.style.color=on?"#00c853":"#ef5350"; }
+    const cb = card.querySelector(".big-toggle input");
+    if (cb) cb.checked = on;
+    updateSummary();
+  }
+
+  function saveSchedule(id) {
+    swState[id].schedule = { onAt:document.getElementById(`sw${id}-on-at`)?.value, offAt:document.getElementById(`sw${id}-off-at`)?.value };
+    saveState(); postConfig(id);
+  }
+
+  function setTrigger(id, type) {
+    swState[id].sensor.triggerType = type;
+    const card = document.getElementById(`sw${id}-card`);
+    card.querySelector(`#sw${id}-trig-low`).className  = `trigger-btn${type==="low"?" active-low":""}`;
+    card.querySelector(`#sw${id}-trig-high`).className = `trigger-btn${type==="high"?" active-high":""}`;
+    renderHyst(id); saveState(); postConfig(id);
+  }
+
+  function updateSensorCfg(id) {
+    const s = swState[id].sensor;
+    s.entity   = document.getElementById(`sw${id}-sensor-entity`)?.value||s.entity;
+    s.setpoint = parseFloat(document.getElementById(`sw${id}-setpoint`)?.value)||0;
+    s.variance = parseFloat(document.getElementById(`sw${id}-variance`)?.value)||0;
+    renderHyst(id); updateLive(id); saveState(); postConfig(id);
+  }
+
+  function renderHyst(id) {
+    const vis = document.getElementById(`sw${id}-hyst`); if (!vis) return;
+    const s    = swState[id].sensor;
+    const sp   = parseFloat(s.setpoint)||0, v=parseFloat(s.variance)||0, half=v/2;
+    const unit = SENSORS.find(x=>x.value===s.entity)?.unit||"";
+    const isLow= s.triggerType==="low";
+    const onTh = isLow?sp-half:sp+half, offTh=isLow?sp+half:sp-half;
+    const pad  = Math.max(v*2.5,1.5), minV=sp-pad, maxV=sp+pad, range=maxV-minV||1;
+    const pct  = val=>`${Math.max(0,Math.min(100,((val-minV)/range)*100)).toFixed(1)}%`;
+    const onPct=parseFloat(pct(onTh)), offPct=parseFloat(pct(offTh));
+    const zL=Math.min(onPct,offPct), zW=Math.abs(offPct-onPct);
+    const zoneGrad=isLow?"linear-gradient(90deg,rgba(96,165,250,0.35),rgba(248,113,113,0.35))":"linear-gradient(90deg,rgba(248,113,113,0.35),rgba(96,165,250,0.35))";
+    vis.innerHTML=`
+      <div class="hyst-title">Hysteresis Band — ${v}${unit} variance</div>
+      <div class="hyst-bar-wrap">
+        <div class="hyst-track"></div>
+        <div class="hyst-zone" style="left:${zL}%;width:${zW}%;background:${zoneGrad}"></div>
+        <div class="hyst-on-marker"  style="left:calc(${pct(onTh)} - 1px)"></div>
+        <div class="hyst-off-marker" style="left:calc(${pct(offTh)} - 1px)"></div>
+      </div>
+      <div class="hyst-labels">
+        <div class="hyst-label ${isLow?"on-lbl":"off-lbl"}" style="align-items:flex-start"><span class="hyst-lv">${(isLow?onTh:offTh).toFixed(1)}${unit}</span><span class="hyst-lk">${isLow?"Turns ON":"Turns OFF"}</span></div>
+        <div class="hyst-label set-lbl" style="align-items:center"><span class="hyst-lv">${sp.toFixed(1)}${unit}</span><span class="hyst-lk">Setpoint</span></div>
+        <div class="hyst-label ${isLow?"off-lbl":"on-lbl"}" style="align-items:flex-end"><span class="hyst-lv">${(isLow?offTh:onTh).toFixed(1)}${unit}</span><span class="hyst-lk">${isLow?"Turns OFF":"Turns ON"}</span></div>
+      </div>`;
+  }
+
+  function updateLive(id) {
+    const s=swState[id].sensor, unit=SENSORS.find(x=>x.value===s.entity)?.unit||"";
+    const val=live[s.entity], liveEl=document.getElementById(`sw${id}-live`), pill=document.getElementById(`sw${id}-pill`);
+    if (!liveEl||!pill) return;
+    if (val===null||val===undefined) { liveEl.textContent="—"; pill.textContent="No Data"; pill.className="auto-status-pill pill-waiting"; return; }
+    liveEl.textContent=val+unit;
+    const sp=parseFloat(s.setpoint), half=parseFloat(s.variance)/2, isLow=s.triggerType==="low";
+    const onTh=isLow?sp-half:sp+half, offTh=isLow?sp+half:sp-half;
+    const curOn=swState[id].on; let next=curOn;
+    if (isLow){ if(val<=onTh)next=true; if(val>=offTh)next=false; }
+    else      { if(val>=onTh)next=true; if(val<=offTh)next=false; }
+    if (swState[id].mode==="sensor"&&next!==curOn) { swState[id].on=next; applyState(id,next); fetch(`/api/switches/toggle?switch=${id}&state=${next?"on":"off"}`,{method:"POST"}); }
+    const inBand=isLow?(val>onTh&&val<offTh):(val<onTh&&val>offTh);
+    if (inBand)    { pill.textContent="Holding"; pill.className="auto-status-pill pill-holding"; }
+    else if (next) { pill.textContent="Active";  pill.className="auto-status-pill pill-triggered"; }
+    else           { pill.textContent="Waiting"; pill.className="auto-status-pill pill-waiting"; }
+  }
+
+  function setAll(on) {
+    SWITCHES.forEach(sw=>{ if(swState[sw.id].mode!=="sensor"){ swState[sw.id].on=on; applyState(sw.id,on); fetch(`/api/switches/toggle?switch=${sw.id}&state=${on?"on":"off"}`,{method:"POST"}); } });
+    saveState();
+  }
+
+  function updateSummary() {
+    let active=0,watts=0;
+    SWITCHES.forEach(sw=>{ if(swState[sw.id]?.on){active++;watts+=sw.watts;} });
+    document.getElementById("active-count").textContent=active;
+    document.getElementById("total-watts").textContent=watts+"W";
+    const monthly=(watts/1000*24*30*0.28).toFixed(2);
+    document.getElementById("est-month").textContent=`$${monthly}`;
+  }
+
+  function saveState() { localStorage.setItem("swState",JSON.stringify(swState)); }
+
+  function postConfig(id) {
+    fetch("/api/switches/config",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,config:swState[id]})}).catch(()=>{});
+  }
+
+  /* ── LIVE POLL ──────────────────────────── */
+  async function pollSensors() {
+    try {
+      const [sData, swData] = await Promise.all([
+        fetch("/api/sensors").then(r=>r.json()),
+        fetch("/api/switches").then(r=>r.json()),
+      ]);
+      // Update live sensor values
+      SENSORS.forEach(sen => {
+        const key = Object.entries({temperature:"temp",ph:"ph",orp:"orp",kh:"kh"}).find(([k,v])=>{ const s=sData[k]; return s?.entity===sen.value||sData[v]!==undefined; });
+        // Try to get value from the sensor entity's state
+        if (sData[sen.value] !== undefined) live[sen.value] = parseFloat(sData[sen.value]);
+      });
+      // Also store legacy
+      Object.entries({temperature:"temp",ph:"ph",orp:"orp",kh:"kh"}).forEach(([key,flat])=>{
+        const eid = sData[key]?.entity;
+        if (eid && sData[key]?.value!==null) live[eid] = parseFloat(sData[key]?.value);
+      });
+
+      // Sync switch states from HA
+      swData.forEach(sw => {
+        if (sw.state === "on" || sw.state === "off") {
+          const newOn = sw.state === "on";
+          if (swState[sw.id] && swState[sw.id].mode !== "sensor" && swState[sw.id].on !== newOn) {
+            swState[sw.id].on = newOn; applyState(sw.id, newOn);
+          }
+        }
+      });
+
+      SWITCHES.forEach(sw=>{ if(swState[sw.id].mode==="sensor") updateLive(sw.id); });
+      const now=new Date();
+      const el=document.getElementById("last-sync");
+      if(el) el.textContent=`Last sync: ${now.getHours()}:${String(now.getMinutes()).padStart(2,"0")}`;
+    } catch(e){}
+  }
+
+  /* ── INIT ───────────────────────────────── */
+  loadConfig();
+  setInterval(pollSensors, 10000);
+  setTimeout(pollSensors, 2000); // first poll after config loads
+</script>
+</body>
+</html>

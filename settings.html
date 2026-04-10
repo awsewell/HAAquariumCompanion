@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Settings</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root {
+      --bg: #05070b; --card-bg: #0c111a; --accent: #1e88ff; --accent-soft: #0f4c81;
+      --accent-cyan: #00c9d8; --accent-yellow: #ffb300; --accent-muted: #3f4b5f;
+      --text-main: #ffffff; --text-sub: #a9b4c8; --radius-lg: 18px; --radius-md: 14px;
+      --shadow-soft: 0 14px 30px rgba(0,0,0,0.6);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Roboto", sans-serif; }
+    body { background: radial-gradient(circle at top, #101624 0, #05070b 55%, #020308 100%); color: var(--text-main); min-height: 100vh; display: flex; justify-content: center; }
+    a { text-decoration: none; color: inherit; }
+    .app { width: 100%; max-width: 420px; padding: 16px 16px 24px; }
+
+    /* HEADER */
+    .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+    .header-left { display: flex; align-items: center; gap: 10px; }
+    .ha-icon { width: 32px; height: 32px; border-radius: 10px; background: radial-gradient(circle at 30% 0, #4fd3ff 0, #1e88ff 40%, #0b2a4a 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 18px rgba(79,211,255,0.7); color: white; font-size: 18px; }
+    .header-title { display: flex; flex-direction: column; }
+    .header-title h1 { font-size: 18px; letter-spacing: 0.12em; text-transform: uppercase; }
+    .header-title span { font-size: 11px; color: var(--text-sub); text-transform: uppercase; letter-spacing: 0.18em; }
+    .header-gear { width: 32px; height: 32px; border-radius: 999px; background: linear-gradient(135deg, #182233, #0b101a); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 10px rgba(0,0,0,0.7); color: var(--text-sub); font-size: 18px; }
+
+    .section-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.18em; color: var(--text-sub); margin-bottom: 10px; margin-top: 20px; }
+
+    /* SETTINGS CARD */
+    .settings-card { background: radial-gradient(circle at top left, #1b2436 0, #0c111a 55%, #05070b 100%); border-radius: var(--radius-lg); padding: 14px 16px; box-shadow: var(--shadow-soft); margin-bottom: 14px; position: relative; overflow: hidden; }
+    .settings-card::before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at top right, rgba(79,211,255,0.10), transparent 55%); pointer-events: none; }
+    .settings-card.ha-card::before { background: radial-gradient(circle at top right, rgba(30,136,255,0.18), transparent 55%); }
+
+    .settings-header { display: flex; align-items: center; justify-content: space-between; cursor: pointer; position: relative; z-index: 1; }
+    .settings-header-left { display: flex; align-items: center; gap: 10px; }
+    .settings-title { font-size: 15px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; }
+    .chevron { font-size: 20px; color: var(--accent-muted); transition: transform 0.25s ease; }
+    .chevron.open { transform: rotate(90deg); }
+    .settings-content { display: none; margin-top: 14px; position: relative; z-index: 1; }
+
+    /* BADGES */
+    .conn-badge { display: flex; align-items: center; gap: 5px; font-size: 10px; padding: 3px 8px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.1em; }
+    .conn-badge.connected    { background: rgba(0,200,83,0.15); color: #00c853; }
+    .conn-badge.disconnected { background: rgba(239,83,80,0.15); color: #ef5350; }
+    .conn-badge.testing      { background: rgba(255,179,0,0.15); color: var(--accent-yellow); }
+    .conn-dot { width: 5px; height: 5px; border-radius: 999px; background: currentColor; }
+
+    /* INPUTS */
+    .field-label { font-size: 11px; color: var(--text-sub); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 4px; margin-top: 12px; }
+    .field-label:first-child { margin-top: 0; }
+    input[type="text"], input[type="password"], input[type="number"], select {
+      width: 100%; padding: 10px; border-radius: 10px; background: #111827; color: white; border: none; font-size: 14px;
+    }
+    input:focus, select:focus { outline: 1px solid var(--accent-muted); }
+    .input-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: end; }
+    .input-row input { margin: 0; }
+    select option { background: #111827; }
+
+    /* DIVIDER */
+    .field-divider { height: 1px; background: rgba(255,255,255,0.06); margin: 16px 0; position: relative; }
+    .field-divider-label { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); background: #111827; padding: 0 8px; font-size: 10px; color: var(--text-sub); text-transform: uppercase; letter-spacing: 0.1em; white-space: nowrap; }
+
+    /* BUTTONS */
+    .save-btn { width: 100%; padding: 12px; margin-top: 14px; border: none; border-radius: var(--radius-md); background: linear-gradient(135deg, #1e88ff, #0f4c81); color: white; font-size: 15px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; box-shadow: 0 10px 22px rgba(0,0,0,0.7); cursor: pointer; }
+    .test-btn { padding: 10px 14px; border: none; border-radius: 10px; background: linear-gradient(135deg, #0c2540, #0c3058); color: var(--accent-cyan); font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; white-space: nowrap; }
+    .test-btn:disabled { opacity: 0.5; cursor: default; }
+    .add-btn { width: 100%; padding: 10px; margin-top: 8px; border: none; border-radius: 10px; background: rgba(30,136,255,0.12); color: var(--accent); font-size: 13px; font-weight: 600; cursor: pointer; letter-spacing: 0.06em; text-transform: uppercase; border: 1px dashed rgba(30,136,255,0.3); }
+    .add-btn:hover { background: rgba(30,136,255,0.2); }
+    .remove-btn { padding: 6px 10px; border: none; border-radius: 8px; background: rgba(239,83,80,0.12); color: #ef5350; font-size: 11px; cursor: pointer; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap; float: right; }
+    .remove-btn:hover { background: rgba(239,83,80,0.22); }
+    .refresh-btn { padding: 6px 12px; border: none; border-radius: 8px; background: rgba(0,201,216,0.12); color: var(--accent-cyan); font-size: 11px; cursor: pointer; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+    .refresh-btn:hover { background: rgba(0,201,216,0.22); }
+
+    /* TOKEN EYE */
+    .token-wrap { position: relative; }
+    .token-wrap input { padding-right: 40px; }
+    .token-eye { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-sub); cursor: pointer; font-size: 16px; }
+
+    /* NOT CONNECTED NOTICE */
+    .not-connected-notice { font-size: 12px; color: var(--text-sub); padding: 8px 0 4px; display: flex; align-items: center; gap: 8px; }
+
+    /* ENTRY HEADER */
+    .entry-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .entry-title { font-size: 12px; color: var(--text-sub); text-transform: uppercase; letter-spacing: 0.12em; }
+
+    /* TOAST */
+    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px); background: #0c111a; border-radius: 20px; padding: 10px 18px; color: white; opacity: 0; transition: opacity 0.2s, transform 0.2s; pointer-events: none; display: flex; align-items: center; gap: 8px; box-shadow: var(--shadow-soft); z-index: 100; }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .toast-dot { width: 6px; height: 6px; border-radius: 999px; background: #00c853; }
+    .toast.error .toast-dot { background: #ef5350; }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <header class="header">
+    <div class="header-left">
+      <a href="index.html" class="ha-icon">⌂</a>
+      <div class="header-title"><h1>SETTINGS</h1><span>configuration</span></div>
+    </div>
+    <a href="settings.html" class="header-gear">⚙</a>
+  </header>
+
+  <!-- HOME ASSISTANT CONNECTION -->
+  <div class="section-label">Home Assistant</div>
+  <div class="settings-card ha-card">
+    <div class="settings-header" onclick="toggleSection('ha')">
+      <div class="settings-header-left">
+        <span class="settings-title">Connection</span>
+        <span class="conn-badge disconnected" id="ha-badge"><span class="conn-dot"></span><span id="ha-badge-text">Not connected</span></span>
+      </div>
+      <span id="ha-chevron" class="chevron">›</span>
+    </div>
+    <div class="settings-content" id="ha-content">
+      <div class="field-label">Host / IP Address</div>
+      <div class="input-row">
+        <input type="text" id="ha-host" placeholder="192.168.1.x" autocomplete="off">
+        <button class="test-btn" id="test-btn" onclick="testConnection()">Test</button>
+      </div>
+      <div class="field-label">Port</div>
+      <input type="number" id="ha-port" value="8123">
+      <div class="field-label">Long-Lived Access Token</div>
+      <div class="token-wrap">
+        <input type="password" id="ha-token" placeholder="Paste your HA token here" autocomplete="off">
+        <button class="token-eye" onclick="toggleToken()">👁</button>
+      </div>
+      <div style="font-size:11px;color:var(--text-sub);margin-top:6px;">HA → Profile → Security → Long-Lived Access Tokens</div>
+      <button class="save-btn" onclick="saveConnection()">Save &amp; Connect</button>
+    </div>
+  </div>
+
+  <!-- LIGHTING CHANNELS -->
+  <div class="section-label">Lighting Channels</div>
+  <div class="settings-card">
+    <div class="settings-header" onclick="toggleSection('lighting')">
+      <div class="settings-header-left">
+        <span class="settings-title">Lighting Channels</span>
+    <!--    <button class="refresh-btn" onclick="event.stopPropagation(); refreshEntities()" style="margin-left:8px;" id="refresh-btn">↻ Refresh</button>  -->
+      </div>
+      <span id="lighting-chevron" class="chevron">›</span>
+    </div>
+    <div class="settings-content" id="lighting-content">
+      <div id="lighting-channels"></div>
+      <button class="add-btn" onclick="addLightingChannel()">+ Add Channel</button>
+      <button class="save-btn" onclick="saveLighting()">Save Lighting</button>
+    </div>
+  </div>
+
+  <!-- DOSING PUMPS -->
+  <div class="section-label">Dosing Pumps</div>
+  <div class="settings-card">
+    <div class="settings-header" onclick="toggleSection('dosing')">
+      <span class="settings-title">Dosing Pumps</span>
+      <span id="dosing-chevron" class="chevron">›</span>
+    </div>
+    <div class="settings-content" id="dosing-content">
+      <div id="dosing-pumps"></div>
+      <button class="add-btn" onclick="addDosingPump()">+ Add Pump</button>
+      <button class="save-btn" onclick="saveDosing()">Save Dosing</button>
+    </div>
+  </div>
+
+  <!-- CIRCULATION PUMPS -->
+  <div class="section-label">Circulation Pumps</div>
+  <div class="settings-card">
+    <div class="settings-header" onclick="toggleSection('pumps')">
+      <span class="settings-title">Circulation Pumps</span>
+      <span id="pumps-chevron" class="chevron">›</span>
+    </div>
+    <div class="settings-content" id="pumps-content">
+      <div id="pump-list"></div>
+      <button class="add-btn" onclick="addPump()">+ Add Pump</button>
+      <button class="save-btn" onclick="savePumps()">Save Pumps</button>
+    </div>
+  </div>
+
+  <!-- SWITCHES -->
+  <div class="section-label">Switches</div>
+  <div class="settings-card">
+    <div class="settings-header" onclick="toggleSection('switches')">
+      <span class="settings-title">Switches</span>
+      <span id="switches-chevron" class="chevron">›</span>
+    </div>
+    <div class="settings-content" id="switches-content">
+      <div id="switch-list"></div>
+      <button class="add-btn" onclick="addSwitch()">+ Add Switch</button>
+      <button class="save-btn" onclick="saveSwitches()">Save Switches</button>
+    </div>
+  </div>
+
+  <!-- SENSORS -->
+  <div class="section-label">Sensors</div>
+  <div class="settings-card">
+    <div class="settings-header" onclick="toggleSection('sensors')">
+      <span class="settings-title">Sensors</span>
+      <span id="sensors-chevron" class="chevron">›</span>
+    </div>
+    <div class="settings-content" id="sensors-content">
+      <div id="sensor-assignments"></div>
+      <button class="add-btn" onclick="addCustomSensor()">+ Add Custom Sensor</button>
+      <button class="save-btn" onclick="saveSensors()">Save Sensors</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"><div class="toast-dot"></div><span id="toast-text">Saved</span></div>
+</div>
+
+<script>
+  /* ─── STATE ─────────────────────────────── */
+  let haEntities  = {};
+  let haConnected = false;
+  let settings    = {};
+
+  // Dynamic lists (managed in memory before saving)
+  let lightingChannels = []; // [{ id, name, entity }]
+  let dosingPumps      = []; // [{ id, name, entity, calibrationEntity, volumeEntity, triggerEntity, schedule }]
+  let circPumps        = []; // [{ id, name, entity }]
+  let switches         = []; // [{ id, name, entity, watts, icon }]
+  let customSensors    = []; // [{ id, name, entity, unit, customUnit, showOnHome, showOnSensors }]
+
+  /* ─── COLLAPSIBLE ───────────────────────── */
+  function toggleSection(key) {
+    const c = document.getElementById(`${key}-content`);
+    const v = document.getElementById(`${key}-chevron`);
+    const open = c.style.display === "block";
+    c.style.display = open ? "none" : "block";
+    v.classList.toggle("open", !open);
+  }
+
+  /* ─── TOKEN ─────────────────────────────── */
+  function toggleToken() {
+    const i = document.getElementById("ha-token");
+    i.type = i.type === "password" ? "text" : "password";
+  }
+
+  /* ─── CONNECTION BADGE ──────────────────── */
+  function setConnBadge(state) {
+    const b = document.getElementById("ha-badge");
+    const t = document.getElementById("ha-badge-text");
+    b.className = `conn-badge ${state}`;
+    t.textContent = { connected:"Connected", disconnected:"Not connected", testing:"Testing…" }[state] || state;
+  }
+
+  /* ─── LOAD HA CONFIG ────────────────────── */
+  async function loadHAConfig() {
+    try {
+      const d = await fetch("/api/config").then(r => r.json());
+      document.getElementById("ha-host").value = d.host || "";
+      document.getElementById("ha-port").value = d.port || 8123;
+      if (d.tokenSet) document.getElementById("ha-token").placeholder = "Token saved — paste to update";
+      haConnected = d.connected;
+      setConnBadge(d.connected ? "connected" : "disconnected");
+    } catch {}
+  }
+
+  /* ─── TEST CONNECTION ───────────────────── */
+  async function testConnection() {
+    const host  = document.getElementById("ha-host").value.trim();
+    const port  = document.getElementById("ha-port").value;
+    const token = document.getElementById("ha-token").value.trim();
+    if (!host) { showToast("Enter a host IP first", true); return; }
+    if (!token && document.getElementById("ha-token").placeholder.includes("paste")) { showToast("Paste your token to test", true); return; }
+    const btn = document.getElementById("test-btn");
+    btn.disabled = true; btn.textContent = "…";
+    setConnBadge("testing");
+    try {
+      const d = await fetch("/api/config/test", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ host, port, token }) }).then(r => r.json());
+      setConnBadge(d.ok ? "connected" : "disconnected");
+      showToast(d.ok ? "Connection successful ✓" : (d.error || "Connection failed"), !d.ok);
+    } catch { setConnBadge("disconnected"); showToast("Could not reach server", true); }
+    btn.disabled = false; btn.textContent = "Test";
+  }
+
+  /* ─── SAVE & CONNECT ────────────────────── */
+  async function saveConnection() {
+    const host  = document.getElementById("ha-host").value.trim();
+    const port  = document.getElementById("ha-port").value;
+    const token = document.getElementById("ha-token").value.trim();
+    if (!host)  { showToast("Enter a host IP",       true); return; }
+    if (!token) { showToast("Paste your access token", true); return; }
+    try {
+      const d = await fetch("/api/config/save", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ host, port, token }) }).then(r => r.json());
+      if (d.ok) {
+        showToast("Connecting to Home Assistant…");
+        document.getElementById("ha-token").value = "";
+        document.getElementById("ha-token").placeholder = "Token saved — paste to update";
+        let attempts = 0;
+        const poll = setInterval(async () => {
+          attempts++;
+          const cfg = await fetch("/api/config").then(r => r.json());
+          if (cfg.connected) {
+            clearInterval(poll); haConnected = true; setConnBadge("connected");
+            showToast("Connected to Home Assistant ✓");
+            await loadEntities(); renderAllSections();
+          } else if (attempts > 10) {
+            clearInterval(poll); setConnBadge("disconnected");
+            showToast("Could not connect — check credentials", true);
+          }
+        }, 1200);
+      }
+    } catch { showToast("Save failed", true); }
+  }
+
+  /* ─── LOAD HA ENTITIES ──────────────────── */
+  async function loadEntities() {
+    try {
+      const d = await fetch("/api/ha/entities").then(r => r.json());
+      haConnected = d.connected; haEntities = d.entities || {};
+    } catch { haEntities = {}; }
+  }
+
+  async function refreshEntities() {
+    const btn = document.getElementById("refresh-btn");
+    btn.textContent = "↻ Loading…"; btn.disabled = true;
+    await loadEntities(); renderAllSections();
+    btn.textContent = "↻ Refresh"; btn.disabled = false;
+    showToast(haConnected ? "Entities refreshed ✓" : "Not connected to HA", !haConnected);
+  }
+
+  /* ─── ENTITY SELECT BUILDER ─────────────── */
+  function buildEntitySelect(id, domains, current, placeholder = "— Select entity —") {
+    if (!haConnected || Object.keys(haEntities).length === 0) {
+      return `
+        <div class="not-connected-notice">⚠️ Connect to HA to see entities</div>
+        <input type="text" id="${id}" value="${current || ""}" placeholder="e.g. switch.heater">
+      `;
+    }
+    const entities = domains.flatMap(d => haEntities[d] || []);
+    if (entities.length === 0) {
+      return `
+        <div class="not-connected-notice">ℹ️ No ${domains.join("/")} entities found in HA</div>
+        <input type="text" id="${id}" value="${current || ""}" placeholder="Enter entity_id manually">
+      `;
+    }
+    const opts = entities.map(e => {
+      const label = e.friendly_name !== e.entity_id ? `${e.friendly_name} (${e.entity_id})` : e.entity_id;
+      return `<option value="${e.entity_id}" ${e.entity_id === current ? "selected" : ""}>${label}</option>`;
+    }).join("");
+    return `<select id="${id}"><option value="">${placeholder}</option>${opts}</select>`;
+  }
+
+  /* ─── RENDER ALL SECTIONS ───────────────── */
+  function renderAllSections() {
+    renderLighting(); renderDosing(); renderPumps(); renderSwitches(); renderSensors();
+  }
+
+  /* ─── LIGHTING ──────────────────────────── */
+  function renderLighting() {
+    const container = document.getElementById("lighting-channels");
+    container.innerHTML = "";
+    lightingChannels.forEach((ch, i) => {
+      const div = document.createElement("div");
+      if (i > 0) div.innerHTML += `<div class="field-divider"></div>`;
+      div.innerHTML += `
+        <div class="entry-header">
+          <span class="entry-title">Channel ${i + 1}</span>
+          <button class="remove-btn" onclick="removeLightingChannel(${i})">✕ Remove</button>
+        </div>
+        <div class="field-label">Name</div>
+        <input type="text" id="lch-name-${i}" value="${ch.name || ""}">
+        <div class="field-label">Light Entity</div>
+        ${buildEntitySelect(`lch-entity-${i}`, ["light"], ch.entity)}
+      `;
+      container.appendChild(div);
+    });
+  }
+
+  function addLightingChannel() {
+    lightingChannels.push({ id: Date.now(), name: "", entity: "" });
+    renderLighting();
+  }
+
+  function removeLightingChannel(i) {
+    lightingChannels.splice(i, 1); renderLighting();
+  }
+
+  async function saveLighting() {
+    const channels = {};
+    lightingChannels.forEach((ch, i) => {
+      const key = `channel_${i + 1}`;
+      channels[key] = {
+        name:   document.getElementById(`lch-name-${i}`)?.value   || "",
+        entity: document.getElementById(`lch-entity-${i}`)?.value || "",
+      };
+    });
+    if (!settings.lighting) settings.lighting = {};
+    settings.lighting.channels = channels;
+    await saveAll("Lighting saved");
+  }
+
+  /* ─── DOSING ────────────────────────────── */
+  function renderDosing() {
+    const container = document.getElementById("dosing-pumps");
+    container.innerHTML = "";
+    dosingPumps.forEach((p, i) => {
+      const div = document.createElement("div");
+      if (i > 0) div.innerHTML += `<div class="field-divider"></div>`;
+      div.innerHTML += `
+        <div class="entry-header">
+          <span class="entry-title">Pump ${i + 1}</span>
+          <button class="remove-btn" onclick="removeDosingPump(${i})">✕ Remove</button>
+        </div>
+
+        <div class="field-label">Name</div>
+        <input type="text" id="dp-name-${i}" value="${p.name || ""}">
+
+        <div class="field-label">Switch Entity <span style="font-weight:400;text-transform:none;letter-spacing:0;">(for manual / priming toggle)</span></div>
+        ${buildEntitySelect(`dp-entity-${i}`, ["switch"], p.entity)}
+
+        <div class="field-label" style="margin-top:14px;color:#ffb300;">HA Input Helpers</div>
+
+        <div class="field-label">Calibration Multiplier <span style="font-weight:400;text-transform:none;letter-spacing:0;">(input_number — sec/mL)</span></div>
+        ${buildEntitySelect(`dp-cal-${i}`, ["input_number"], p.calibrationEntity)}
+
+        <div class="field-label">Dose Volume <span style="font-weight:400;text-transform:none;letter-spacing:0;">(input_number — mL per dose)</span></div>
+        ${buildEntitySelect(`dp-vol-${i}`, ["input_number"], p.volumeEntity)}
+
+        <div class="field-label">Trigger Boolean <span style="font-weight:400;text-transform:none;letter-spacing:0;">(input_boolean — starts HA automation)</span></div>
+        ${buildEntitySelect(`dp-trigger-${i}`, ["input_boolean"], p.triggerEntity)}
+
+        <div style="font-size:11px;color:var(--text-sub);margin-top:8px;">
+          Dosing schedules are configured on the <a href="dosing.html" style="color:var(--accent)">Dosing page →</a>
+        </div>
+      `;
+      container.appendChild(div);
+    });
+  }
+
+  function addDosingPump() {
+    dosingPumps.push({ id: Date.now(), name: "", entity: "", calibrationEntity: "", volumeEntity: "", triggerEntity: "" });
+    renderDosing();
+  }
+
+  function removeDosingPump(i) {
+    dosingPumps.splice(i, 1); renderDosing();
+  }
+
+  async function saveDosing() {
+    const pumps = {};
+    dosingPumps.forEach((p, i) => {
+      pumps[`pump_${i + 1}`] = {
+        name:              document.getElementById(`dp-name-${i}`)?.value    || "",
+        entity:            document.getElementById(`dp-entity-${i}`)?.value  || "",
+        calibrationEntity: document.getElementById(`dp-cal-${i}`)?.value     || "",
+        volumeEntity:      document.getElementById(`dp-vol-${i}`)?.value     || "",
+        triggerEntity:     document.getElementById(`dp-trigger-${i}`)?.value || "",
+      };
+    });
+    if (!settings.dosing) settings.dosing = {};
+    settings.dosing.pumps = pumps;
+    await saveAll("Dosing pumps saved");
+  }
+
+  /* ─── CIRCULATION PUMPS ─────────────────── */
+  function renderPumps() {
+    const container = document.getElementById("pump-list");
+    container.innerHTML = "";
+    circPumps.forEach((p, i) => {
+      const div = document.createElement("div");
+      if (i > 0) div.innerHTML += `<div class="field-divider"></div>`;
+      div.innerHTML += `
+        <div class="entry-header">
+          <span class="entry-title">Pump ${i + 1}</span>
+          <button class="remove-btn" onclick="removePump(${i})">✕ Remove</button>
+        </div>
+        <div class="field-label">Name</div>
+        <input type="text" id="cp-name-${i}" value="${p.name || ""}">
+        <div class="field-label">Switch / Fan Entity</div>
+        ${buildEntitySelect(`cp-entity-${i}`, ["switch","fan"], p.entity)}
+      `;
+      container.appendChild(div);
+    });
+  }
+
+  function addPump() {
+    circPumps.push({ id: Date.now(), name: "", entity: "" }); renderPumps();
+  }
+
+  function removePump(i) {
+    circPumps.splice(i, 1); renderPumps();
+  }
+
+  async function savePumps() {
+    const pumps = {};
+    circPumps.forEach((p, i) => {
+      pumps[`pump_${i + 1}`] = {
+        name:   document.getElementById(`cp-name-${i}`)?.value   || "",
+        entity: document.getElementById(`cp-entity-${i}`)?.value || "",
+      };
+    });
+    settings.pumps = pumps;
+    await saveAll("Pumps saved");
+  }
+
+  /* ─── SWITCHES ──────────────────────────── */
+  function renderSwitches() {
+    const container = document.getElementById("switch-list");
+    container.innerHTML = "";
+    switches.forEach((sw, i) => {
+      const div = document.createElement("div");
+      if (i > 0) div.innerHTML += `<div class="field-divider"></div>`;
+      div.innerHTML += `
+        <div class="entry-header">
+          <span class="entry-title">Switch ${i + 1}</span>
+          <button class="remove-btn" onclick="removeSwitch(${i})">✕ Remove</button>
+        </div>
+        <div class="field-label">Display Name</div>
+        <input type="text" id="sw-name-${i}" value="${sw.name || ""}">
+        <div class="field-label">Switch Entity</div>
+        ${buildEntitySelect(`sw-entity-${i}`, ["switch"], sw.entity)}
+        <div class="field-label">Rated Watts (for power summary)</div>
+        <input type="number" id="sw-watts-${i}" value="${sw.watts || 0}" min="0">
+        <div class="field-label">Icon</div>
+        <input type="text" id="sw-icon-${i}" value="${sw.icon || "⏻"}" style="max-width:80px;">
+      `;
+      container.appendChild(div);
+    });
+  }
+
+  function addSwitch() {
+    switches.push({ id: Date.now(), name: "", entity: "", watts: 0, icon: "⏻" }); renderSwitches();
+  }
+
+  function removeSwitch(i) {
+    switches.splice(i, 1); renderSwitches();
+  }
+
+  async function saveSwitches() {
+    const sw = {};
+    switches.forEach((s, i) => {
+      sw[`switch_${i + 1}`] = {
+        name:   document.getElementById(`sw-name-${i}`)?.value   || "",
+        entity: document.getElementById(`sw-entity-${i}`)?.value || "",
+        watts:  parseFloat(document.getElementById(`sw-watts-${i}`)?.value) || 0,
+        icon:   document.getElementById(`sw-icon-${i}`)?.value   || "⏻",
+      };
+    });
+    settings.switches = sw;
+    await saveAll("Switches saved");
+  }
+
+  /* ─── SENSORS ───────────────────────────── */
+  const UNIT_OPTIONS = ["°C","°F","ppm","%","‰","mV","dKH","none","custom"];
+
+  // JS state for built-in active flags — source of truth, not the DOM
+  const sensorActive = { temperature: true, ph: true, orp: true, kh: true };
+
+  function renderSensors() {
+    const container = document.getElementById("sensor-assignments");
+    const sens = settings.sensors || {};
+    container.innerHTML = "";
+
+    // Sync sensorActive from saved settings (support both old showGraph and new active)
+    ["temperature","ph","orp","kh"].forEach(key => {
+      const cfg = sens[key] || {};
+      sensorActive[key] = cfg.active !== undefined ? cfg.active !== false : cfg.showGraph !== false;
+    });
+
+    const groups = [
+      { key:"temperature", label:"Temperature", unit:"°C" },
+      { key:"ph",          label:"pH",          unit:""   },
+      { key:"orp",         label:"ORP",         unit:"mV" },
+      { key:"kh",          label:"KH / Alkalinity", unit:"dKH" },
+    ];
+
+    groups.forEach(({ key, label, unit }, gi) => {
+      const saved  = Array.isArray(sens[key]) ? sens[key] : [sens[key]?.primary || "", sens[key]?.secondary || ""];
+      const active = sensorActive[key];
+      const div = document.createElement("div");
+      if (gi > 0) div.innerHTML += `<div class="field-divider"></div>`;
+      div.innerHTML += `
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <span style="font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;">${label}</span>
+          <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-sub);">
+            <span id="${key}-active-lbl">${active ? "Active" : "Hidden"}</span>
+            <div style="position:relative;width:36px;height:20px;cursor:pointer;" id="${key}-active-toggle">
+              <div id="${key}-active-track" style="position:absolute;inset:0;border-radius:999px;background:${active ? "var(--accent)" : "#1a2333"};transition:background 0.25s;">
+                <div id="${key}-active-thumb" style="position:absolute;top:2px;left:${active ? "16px" : "2px"};width:16px;height:16px;border-radius:999px;background:#fff;transition:left 0.25s;box-shadow:0 1px 4px rgba(0,0,0,0.4);"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="field-label">Primary Sensor ${unit ? "("+unit+")" : ""}</div>
+        ${buildEntitySelect(`${key}-1`, ["sensor"], saved[0])}
+        <div class="field-label">Secondary / Backup Sensor</div>
+        ${buildEntitySelect(`${key}-2`, ["sensor"], saved[1])}
+      `;
+      container.appendChild(div);
+
+      // Attach listener after element is in DOM
+      document.getElementById(`${key}-active-toggle`).addEventListener("click", () => toggleActive(key));
+    });
+
+    // Custom sensors
+    const custDiv = document.createElement("div");
+    custDiv.id = "custom-sensor-list";
+    container.appendChild(custDiv);
+    renderCustomSensors();
+  }
+
+  function toggleActive(key) {
+    sensorActive[key] = !sensorActive[key];
+    const val = sensorActive[key];
+    document.getElementById(`${key}-active-track`).style.background = val ? "var(--accent)" : "#1a2333";
+    document.getElementById(`${key}-active-thumb`).style.left       = val ? "16px" : "2px";
+    document.getElementById(`${key}-active-lbl`).textContent        = val ? "Active" : "Hidden";
+  }
+
+  function renderCustomSensors() {
+    const c = document.getElementById("custom-sensor-list");
+    if (!c) return;
+    c.innerHTML = "";
+    customSensors.forEach((s, i) => {
+      const unitOpts = UNIT_OPTIONS.map(u =>
+        `<option value="${u}" ${(s.unit||"none")===u?"selected":""}>${u}</option>`
+      ).join("");
+      const div = document.createElement("div");
+      div.innerHTML = `
+        <div class="field-divider"></div>
+        <div class="entry-header">
+          <span class="entry-title">Custom Sensor ${i+1}</span>
+          <button class="remove-btn" onclick="removeCustomSensor(${i})">✕ Remove</button>
+        </div>
+        <div class="field-label">Name</div>
+        <input type="text" id="cs-name-${i}" value="${s.name||""}">
+        <div class="field-label">Sensor Entity</div>
+        ${buildEntitySelect(`cs-entity-${i}`, ["sensor"], s.entity)}
+        <div class="field-label">Unit</div>
+        <select id="cs-unit-${i}">
+          ${unitOpts}
+        </select>
+        <div id="cs-custom-unit-wrap-${i}" style="display:${s.unit==="custom"?"block":"none"};margin-top:6px;">
+          <input type="text" id="cs-custom-unit-${i}" value="${s.customUnit||""}" placeholder="e.g. NTU">
+        </div>
+        <div style="display:flex;gap:16px;margin-top:10px;">
+          <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-sub);">
+            <span>Show on Home</span>
+            <div style="position:relative;width:36px;height:20px;cursor:pointer;" id="cs-home-toggle-${i}">
+              <div id="cs-home-track-${i}" style="position:absolute;inset:0;border-radius:999px;background:#1a2333;transition:background 0.25s;">
+                <div style="position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:999px;background:#fff;transition:left 0.25s;box-shadow:0 1px 4px rgba(0,0,0,0.4);" id="cs-home-thumb-${i}"></div>
+              </div>
+            </div>
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-sub);">
+            <span>Show Graph</span>
+            <div style="position:relative;width:36px;height:20px;cursor:pointer;" id="cs-sensors-toggle-${i}">
+              <div id="cs-sensors-track-${i}" style="position:absolute;inset:0;border-radius:999px;background:#1a2333;transition:background 0.25s;">
+                <div style="position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:999px;background:#fff;transition:left 0.25s;box-shadow:0 1px 4px rgba(0,0,0,0.4);" id="cs-sensors-thumb-${i}"></div>
+              </div>
+            </div>
+          </label>
+        </div>
+      `;
+      c.appendChild(div);
+
+      // Set initial thumb positions via JS after element is in DOM
+      _setThumb(`cs-home-track-${i}`,    `cs-home-thumb-${i}`,    s.showOnHome);
+      _setThumb(`cs-sensors-track-${i}`, `cs-sensors-thumb-${i}`, s.showOnSensors);
+
+      // Sync all text/select changes into customSensors state immediately
+      document.getElementById(`cs-name-${i}`).addEventListener("input", e => { customSensors[i].name = e.target.value; });
+      document.getElementById(`cs-unit-${i}`).addEventListener("change", e => {
+        customSensors[i].unit = e.target.value;
+        toggleCustomUnit(i);
+      });
+      const custUnitEl = document.getElementById(`cs-custom-unit-${i}`);
+      if (custUnitEl) custUnitEl.addEventListener("input", e => { customSensors[i].customUnit = e.target.value; });
+
+      // Entity field — may be a <select> or <input> depending on HA connection
+      const entityEl = document.getElementById(`cs-entity-${i}`);
+      if (entityEl) entityEl.addEventListener("change", e => { customSensors[i].entity = e.target.value; });
+
+      // Toggle listeners
+      document.getElementById(`cs-home-toggle-${i}`).addEventListener("click", () => {
+        customSensors[i].showOnHome = !customSensors[i].showOnHome;
+        _setThumb(`cs-home-track-${i}`, `cs-home-thumb-${i}`, customSensors[i].showOnHome);
+      });
+      document.getElementById(`cs-sensors-toggle-${i}`).addEventListener("click", () => {
+        customSensors[i].showOnSensors = !customSensors[i].showOnSensors;
+        _setThumb(`cs-sensors-track-${i}`, `cs-sensors-thumb-${i}`, customSensors[i].showOnSensors);
+      });
+    });
+  }
+
+  function _setThumb(trackId, thumbId, on) {
+    const track = document.getElementById(trackId);
+    const thumb = document.getElementById(thumbId);
+    if (!track || !thumb) return;
+    track.style.background = on ? "var(--accent)" : "#1a2333";
+    thumb.style.left       = on ? "16px" : "2px";
+  }
+
+  function toggleCustomUnit(i) {
+    const val  = document.getElementById(`cs-unit-${i}`)?.value;
+    const wrap = document.getElementById(`cs-custom-unit-wrap-${i}`);
+    if (wrap) wrap.style.display = val === "custom" ? "block" : "none";
+  }
+
+  function addCustomSensor() {
+    customSensors.push({ id: Date.now(), name:"", entity:"", unit:"none", customUnit:"", showOnHome:false, showOnSensors:true });
+    renderSensors();
+  }
+
+  function removeCustomSensor(i) {
+    customSensors.splice(i, 1); renderSensors();
+  }
+
+  async function saveSensors() {
+    if (!settings.sensors) settings.sensors = {};
+
+    // Built-in sensors — read from sensorActive JS state + entity selects
+    ["temperature","ph","orp","kh"].forEach(key => {
+      settings.sensors[key] = {
+        primary:   document.getElementById(`${key}-1`)?.value || "",
+        secondary: document.getElementById(`${key}-2`)?.value || "",
+        active:    sensorActive[key],
+      };
+    });
+
+    // Custom sensors — read entirely from customSensors JS state (synced via event listeners)
+    const custom = {};
+    customSensors.forEach((s, i) => {
+      custom[`custom_${i+1}`] = {
+        name:          s.name,
+        entity:        s.entity,
+        unit:          s.unit,
+        customUnit:    s.customUnit,
+        showOnHome:    s.showOnHome,
+        showOnSensors: s.showOnSensors,
+      };
+    });
+    settings.sensors.custom = custom;
+
+    console.log("Saving sensors:", JSON.stringify(settings.sensors, null, 2));
+    await saveAll("Sensors saved");
+  }
+
+  /* ─── SAVE TO BACKEND ───────────────────── */
+  async function saveAll(msg = "Settings saved") {
+    try {
+      const r = await fetch("/api/settings/save", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(settings) });
+      if ((await r.json()).ok) showToast(msg);
+      else showToast("Save failed", true);
+    } catch { showToast("Save failed", true); }
+  }
+
+  /* ─── TOAST ─────────────────────────────── */
+  function showToast(msg = "Saved", isError = false) {
+    const t = document.getElementById("toast");
+    document.getElementById("toast-text").textContent = msg;
+    t.classList.toggle("error", isError);
+    t.classList.add("show");
+    setTimeout(() => t.classList.remove("show"), 2800);
+  }
+
+  /* ─── INIT ──────────────────────────────── */
+  function getVal(id) { const e = document.getElementById(id); return e ? e.value : ""; }
+
+  async function init() {
+    await loadHAConfig();
+    try { settings = await fetch("/api/settings").then(r => r.json()); } catch { settings = {}; }
+    await loadEntities();
+
+    // Hydrate dynamic lists from saved settings
+    const lch = settings.lighting?.channels || {};
+    lightingChannels = Object.values(lch).map((c, i) => ({ id:i, name:c.name||"", entity:c.entity||"" }));
+    if (lightingChannels.length === 0) lightingChannels = [{ id:0, name:"", entity:"" }];
+
+    const dp = settings.dosing?.pumps || {};
+    dosingPumps = Object.values(dp).map((p, i) => ({
+      id: i,
+      name:              p.name              || "",
+      entity:            p.entity            || "",
+      calibrationEntity: p.calibrationEntity || "",
+      volumeEntity:      p.volumeEntity      || "",
+      triggerEntity:     p.triggerEntity     || "",
+    }));
+    if (dosingPumps.length === 0) dosingPumps = [{ id:0, name:"", entity:"", calibrationEntity:"", volumeEntity:"", triggerEntity:"" }];
+
+    const cp = settings.pumps || {};
+    circPumps = Object.values(cp).map((p, i) => ({ id:i, name:p.name||"", entity:p.entity||"" }));
+    if (circPumps.length === 0) circPumps = [{ id:0, name:"", entity:"" }];
+
+    const sw = settings.switches || {};
+    switches = Object.values(sw).map((s, i) => ({ id:i, name:s.name||"", entity:s.entity||"", watts:s.watts||0, icon:s.icon||"⏻" }));
+    if (switches.length === 0) switches = [{ id:0, name:"", entity:"", watts:0, icon:"⏻" }];
+
+    const cs = settings.sensors?.custom || {};
+    customSensors = Object.values(cs).map((s, i) => ({
+      id: i, name: s.name||"", entity: s.entity||"", unit: s.unit||"none",
+      customUnit: s.customUnit||"", showOnHome: !!s.showOnHome, showOnSensors: s.showOnSensors!==false,
+    }));
+
+    renderAllSections();
+
+    // Auto-open HA section if not connected
+    if (!haConnected) {
+      document.getElementById("ha-content").style.display = "block";
+      document.getElementById("ha-chevron").classList.add("open");
+    }
+  }
+
+  init();
+</script>
+</body>
+</html>

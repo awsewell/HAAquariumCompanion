@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sensors</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root {
+      --bg: #05070b; --card-bg: #0c111a; --accent: #1e88ff; --accent-soft: #0f4c81;
+      --accent-cyan: #00c9d8; --accent-yellow: #ffb300; --accent-muted: #3f4b5f;
+      --text-main: #ffffff; --text-sub: #a9b4c8; --radius-lg: 18px; --radius-md: 14px;
+      --shadow-soft: 0 14px 30px rgba(0,0,0,0.6);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Roboto", sans-serif; }
+    body { background: radial-gradient(circle at top, #101624 0, #05070b 55%, #020308 100%); color: var(--text-main); min-height: 100vh; display: flex; justify-content: center; }
+    a { text-decoration: none; color: inherit; }
+    .app { width: 100%; max-width: 420px; padding: 16px 16px 24px; }
+
+    .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+    .header-left { display: flex; align-items: center; gap: 10px; }
+    .ha-icon { width: 32px; height: 32px; border-radius: 10px; background: radial-gradient(circle at 30% 0, #4fd3ff 0, #1e88ff 40%, #0b2a4a 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 18px rgba(79,211,255,0.7); font-size: 18px; color: #fff; }
+    .header-title { display: flex; flex-direction: column; }
+    .header-title h1 { font-size: 18px; letter-spacing: 0.12em; text-transform: uppercase; }
+    .header-title span { font-size: 11px; color: var(--text-sub); text-transform: uppercase; letter-spacing: 0.18em; }
+    .header-gear { width: 32px; height: 32px; border-radius: 999px; background: linear-gradient(135deg, #182233, #0b101a); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 10px rgba(0,0,0,0.7); color: var(--text-sub); font-size: 18px; }
+    .section-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.18em; color: var(--text-sub); margin-bottom: 10px; margin-top: 20px; }
+
+    /* SENSOR CARD */
+    .sensor-card { background: radial-gradient(circle at top left, #1b2436 0, #0c111a 55%, #05070b 100%); border-radius: var(--radius-lg); padding: 16px; box-shadow: var(--shadow-soft); margin-bottom: 14px; position: relative; overflow: hidden; }
+    .sensor-card::before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at top right, rgba(79,211,255,0.12), transparent 55%); pointer-events: none; }
+
+    .sensor-top { display: flex; align-items: flex-start; justify-content: space-between; position: relative; z-index: 1; }
+    .sensor-left { display: flex; align-items: center; gap: 12px; }
+    .sensor-icon-wrap { width: 40px; height: 40px; border-radius: 999px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+    .sensor-icon-wrap.temp { background: linear-gradient(135deg, #1e88ff, #00c9d8); box-shadow: 0 0 14px rgba(30,136,255,0.5); }
+    .sensor-icon-wrap.ph   { background: linear-gradient(135deg, #00c9d8, #00a0b8); box-shadow: 0 0 14px rgba(0,201,216,0.5); }
+    .sensor-icon-wrap.orp  { background: linear-gradient(135deg, #ffb300, #ff7043); box-shadow: 0 0 14px rgba(255,179,0,0.5); }
+    .sensor-icon-wrap.kh   { background: linear-gradient(135deg, #7e8ba8, #4f5b78); box-shadow: 0 0 14px rgba(126,139,168,0.4); }
+
+    .sensor-meta { display: flex; flex-direction: column; }
+    .sensor-name   { font-size: 13px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; }
+    .sensor-entity { font-size: 10px; color: var(--text-sub); margin-top: 2px; }
+    .sensor-value-block { text-align: right; }
+    .sensor-big-val  { font-size: 32px; font-weight: 700; line-height: 1; }
+    .sensor-big-unit { font-size: 13px; color: var(--text-sub); }
+
+    /* STATUS BAR */
+    .status-bar-wrap { margin-top: 14px; position: relative; z-index: 1; }
+    .status-bar-labels { display: flex; justify-content: space-between; margin-bottom: 4px; }
+    .status-bar-labels span { font-size: 10px; color: var(--text-sub); }
+    .status-bar { height: 6px; border-radius: 3px; background: #1a2333; overflow: hidden; position: relative; }
+    .status-bar-fill { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
+    .status-bar-marker { position: absolute; top: -3px; width: 2px; height: 12px; background: rgba(255,255,255,0.25); border-radius: 1px; }
+
+    .range-row { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; position: relative; z-index: 1; }
+    .range-pill { font-size: 10px; padding: 3px 8px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.1em; }
+    .range-pill.ok    { background: rgba(0,200,83,0.15);  color: #00c853; }
+    .range-pill.warn  { background: rgba(255,179,0,0.15); color: var(--accent-yellow); }
+    .range-pill.alert { background: rgba(239,83,80,0.2);  color: #ef5350; }
+    .range-bounds { font-size: 10px; color: var(--text-sub); }
+
+    /* TIME RANGE TOGGLE */
+    .time-range { display: flex; gap: 4px; }
+    .time-btn {
+      padding: 3px 8px; border: none; border-radius: 6px;
+      background: #111827; color: var(--text-sub);
+      font-size: 10px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.08em; cursor: pointer; transition: all 0.15s;
+    }
+    .time-btn.active {
+      background: rgba(0,201,216,0.15); color: var(--accent-cyan);
+    }
+
+    /* SPARKLINE */
+    .sparkline-wrap { margin-top: 14px; position: relative; z-index: 1; }
+    .sparkline-label { font-size: 10px; color: var(--text-sub); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 6px; display: flex; justify-content: space-between; }
+    canvas.sparkline { width: 100%; height: 50px; display: block; border-radius: 8px; background: #0a0f1a; }
+
+    /* DUAL PROBE */
+    .dual-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; position: relative; z-index: 1; }
+    .dual-box { background: #0a0f1a; border-radius: 12px; padding: 10px; text-align: center; }
+    .dual-label { font-size: 10px; color: var(--text-sub); text-transform: uppercase; letter-spacing: 0.1em; }
+    .dual-val   { font-size: 20px; font-weight: 600; margin-top: 4px; }
+    .dual-diff  { font-size: 10px; margin-top: 2px; color: var(--text-sub); }
+
+    /* NOT CONFIGURED */
+    .not-configured { font-size: 12px; color: var(--text-sub); padding: 10px 0; position: relative; z-index: 1; }
+
+    /* CUSTOM SENSOR */
+    .sensor-icon-wrap.custom { background: linear-gradient(135deg, #7c4dff, #5c35cc); box-shadow: 0 0 14px rgba(124,77,255,0.4); }
+
+    /* FOOTER */
+    .footer { margin-top: 18px; font-size: 11px; color: var(--text-sub); display: flex; justify-content: space-between; opacity: 0.8; }
+    .footer-left { display: flex; align-items: center; }
+    .status-dot { width: 8px; height: 8px; border-radius: 999px; margin-right: 6px; transition: background 0.4s, box-shadow 0.4s; }
+    .status-dot.connected    { background: #00c853; box-shadow: 0 0 8px rgba(0,200,83,0.9); }
+    .status-dot.disconnected { background: #ef5350; box-shadow: 0 0 8px rgba(239,83,80,0.6); }
+  </style>
+</head>
+<body>
+<div class="app">
+  <header class="header">
+    <div class="header-left">
+      <a href="index.html" class="ha-icon">⌂</a>
+      <div class="header-title"><h1>SENSORS</h1><span>live readings</span></div>
+    </div>
+    <a href="settings.html" class="header-gear">⚙</a>
+  </header>
+
+  <div id="sensor-container"></div>
+
+  <footer class="footer">
+    <div class="footer-left">
+      <span class="status-dot disconnected" id="conn-dot"></span>
+      <span id="conn-label">Connecting…</span>
+    </div>
+    <span id="last-sync">—</span>
+  </footer>
+</div>
+
+<script>
+  /* ── BUILT-IN SENSOR DEFINITIONS ────────────────────────────────────────── */
+  const SENSOR_DEFS = [
+    { key:"temperature", label:"Temperature", icon:"🌡", cls:"temp", unit:"°C",  optRange:[24,27], absRange:[22,30], gradient:"#1e88ff,#00c9d8" },
+    { key:"ph",          label:"pH",          icon:"⚗", cls:"ph",   unit:"",    optRange:[8.1,8.4],absRange:[7.8,8.6],gradient:"#00c9d8,#00a0b8" },
+    { key:"orp",         label:"ORP",         icon:"⚡", cls:"orp",  unit:"mV",  optRange:[300,450],absRange:[200,500],gradient:"#ffb300,#ff7043" },
+    { key:"kh",          label:"KH",          icon:"💧", cls:"kh",   unit:"dKH", optRange:[8,12],   absRange:[6,14],  gradient:"#7e8ba8,#4f5b78" },
+  ];
+
+  let liveData  = {};
+  let sensorCfg = {};
+  let customData = [];  // array from /api/sensors custom field
+
+  /* ── SPARKLINE ───────────────────────────────────────────────────────────── */
+  function drawSparkline(canvasId, data, color) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    const W = canvas.width, H = canvas.height;
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = "#0a0f1a"; ctx.fillRect(0, 0, W, H);
+
+    if (!data || data.length < 2) return;
+
+    const vals = data.map(d => (typeof d === "object" ? d.v : d));
+    const min  = Math.min(...vals), max = Math.max(...vals);
+    const range = max - min || 1;
+    const pad = 8;
+
+    const grad = ctx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, color + "50"); grad.addColorStop(1, color + "08");
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    vals.forEach((v, i) => {
+      const x = (i / (vals.length - 1)) * W;
+      const y = H - pad - ((v - min) / range) * (H - pad * 2);
+      i === 0 ? (ctx.moveTo(x, H), ctx.lineTo(x, y)) : ctx.lineTo(x, y);
+    });
+    ctx.lineTo(W, H); ctx.closePath(); ctx.fill();
+
+    ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.beginPath();
+    vals.forEach((v, i) => {
+      const x = (i / (vals.length - 1)) * W;
+      const y = H - pad - ((v - min) / range) * (H - pad * 2);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+    return { min: Math.min(...vals).toFixed(2), max: Math.max(...vals).toFixed(2) };
+  }
+
+  /* ── RANGE HELPERS ───────────────────────────────────────────────────────── */
+  function statusBarPct(value, absMin, absMax) {
+    return Math.max(0, Math.min(100, ((value - absMin) / (absMax - absMin)) * 100));
+  }
+  function getRangePill(value, optMin, optMax, absMin, absMax) {
+    if (value === null || value === undefined) return { cls:"warn", label:"⚠ No Data" };
+    if (value >= optMin && value <= optMax)    return { cls:"ok",   label:"✓ Optimal" };
+    if (value < absMin  || value > absMax)     return { cls:"alert",label:"⚠ Out of Range" };
+    return { cls:"warn", label:"⚠ Caution" };
+  }
+
+  /* ── RENDER ALL CARDS ────────────────────────────────────────────────────── */
+  function renderCards() {
+    const container = document.getElementById("sensor-container");
+    container.innerHTML = "";
+
+    // Built-in sensors
+    SENSOR_DEFS.forEach(def => {
+      const cfg = sensorCfg[def.key] || {};
+      if (cfg.active === false) return;
+
+      const primaryEid   = cfg.primary   || "";
+      const secondaryEid = cfg.secondary || "";
+      const val  = liveData[def.key] !== undefined ? parseFloat(liveData[def.key]) : null;
+      const val2 = secondaryEid ? (parseFloat(liveData[`${def.key}_secondary`]) || null) : null;
+
+      const pill      = getRangePill(val, def.optRange[0], def.optRange[1], def.absRange[0], def.absRange[1]);
+      const barPct    = val !== null ? statusBarPct(val, def.absRange[0], def.absRange[1]) : 0;
+      const optMinPct = statusBarPct(def.optRange[0], def.absRange[0], def.absRange[1]);
+      const optMaxPct = statusBarPct(def.optRange[1], def.absRange[0], def.absRange[1]);
+      const displayVal = val !== null ? `${val}${def.unit === "°C" ? "°" : ""}` : "—";
+      const unitLabel  = def.unit === "°C" ? "Celsius" : (def.unit || "—");
+
+      const card = document.createElement("div");
+      card.innerHTML = `
+        <div class="section-label">${def.label}</div>
+        <div class="sensor-card">
+          <div class="sensor-top">
+            <div class="sensor-left">
+              <div class="sensor-icon-wrap ${def.cls}">${def.icon}</div>
+              <div class="sensor-meta">
+                <span class="sensor-name">${def.label}</span>
+              </div>
+            </div>
+            <div class="sensor-value-block">
+              <div class="sensor-big-val" id="${def.key}-val">${displayVal}</div>
+              <div class="sensor-big-unit">${unitLabel}</div>
+            </div>
+          </div>
+
+          ${primaryEid ? `
+          <div class="status-bar-wrap">
+            <div class="status-bar-labels">
+              <span>${def.absRange[0]}${def.unit}</span>
+              <span>Optimal: ${def.optRange[0]}–${def.optRange[1]}${def.unit}</span>
+              <span>${def.absRange[1]}${def.unit}</span>
+            </div>
+            <div class="status-bar">
+              <div class="status-bar-fill" id="${def.key}-bar"
+                   style="width:${barPct}%;background:linear-gradient(90deg,${def.gradient})"></div>
+              <div class="status-bar-marker" style="left:${optMinPct}%"></div>
+              <div class="status-bar-marker" style="left:${optMaxPct}%"></div>
+            </div>
+          </div>
+          <div class="range-row">
+            <span class="range-pill ${pill.cls}" id="${def.key}-pill">${pill.label}</span>
+            <span class="range-bounds">Range: ${def.optRange[0]} – ${def.optRange[1]} ${def.unit}</span>
+          </div>
+          <div class="sparkline-wrap">
+            <div class="sparkline-label">
+              <div class="time-range" id="${def.key}-time-range">
+                <button class="time-btn active" data-hours="8">8h</button>
+                <button class="time-btn" data-hours="24">24h</button>
+                <button class="time-btn" data-hours="48">48h</button>
+              </div>
+              <span id="${def.key}-minmax">Loading…</span>
+            </div>
+            <canvas class="sparkline" id="${def.key}-sparkline" width="800" height="100"></canvas>
+          </div>
+          ` : `<div class="not-configured">No sensor assigned. <a href="settings.html" style="color:var(--accent)">Configure in Settings →</a></div>`}
+
+          ${secondaryEid ? `
+          <div class="dual-row">
+            <div class="dual-box">
+              <div class="dual-label">Primary</div>
+              <div class="dual-val" style="color:var(--accent-cyan)" id="${def.key}-v1">${val !== null ? val : "—"}</div>
+            </div>
+            <div class="dual-box">
+              <div class="dual-label">Secondary</div>
+              <div class="dual-val" style="color:var(--text-sub)" id="${def.key}-v2">${val2 !== null ? val2 : "—"}</div>
+            </div>
+          </div>` : ""}
+        </div>
+      `;
+      container.appendChild(card);
+
+      // Attach time range button listeners for built-in sensors
+      if (primaryEid) {
+        const color = "#" + def.gradient.split(",")[0].replace("#","");
+        const entity = primaryEid; // capture at render time
+        const unit   = def.unit;
+        const key    = def.key;
+        card.querySelectorAll(`#${key}-time-range .time-btn`).forEach(btn => {
+          btn.addEventListener("click", () => {
+            card.querySelectorAll(`#${key}-time-range .time-btn`).forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+            const hours = parseInt(btn.dataset.hours);
+            sparklineHours[key] = hours;
+            fetchSensorSparkline(key, entity, color, unit, hours);
+          });
+        });
+      }
+
+    }); // end SENSOR_DEFS.forEach
+
+    // Custom sensors
+    customData.forEach((s, i) => {
+      if (!s.showOnSensors) return;
+      const val = s.value !== null ? parseFloat(s.value) : null;
+      const displayUnit = s.unit === "custom" ? s.customUnit : (s.unit === "none" ? "" : s.unit);
+      const displayVal  = val !== null ? `${val}` : "—";
+
+      const card = document.createElement("div");
+      card.innerHTML = `
+        <div class="section-label">${s.name || "Custom Sensor"}</div>
+        <div class="sensor-card">
+          <div class="sensor-top">
+            <div class="sensor-left">
+              <div class="sensor-icon-wrap custom">📡</div>
+              <div class="sensor-meta">
+                <span class="sensor-name">${s.name || "Custom"}</span>
+              </div>
+            </div>
+            <div class="sensor-value-block">
+              <div class="sensor-big-val" id="custom-val-${i}">${displayVal}</div>
+              <div class="sensor-big-unit">${displayUnit}</div>
+            </div>
+          </div>
+          ${s.entity ? `
+          <div class="sparkline-wrap">
+            <div class="sparkline-label">
+              <div class="time-range" id="custom-time-range-${i}">
+                <button class="time-btn active" data-hours="8">8h</button>
+                <button class="time-btn" data-hours="24">24h</button>
+                <button class="time-btn" data-hours="48">48h</button>
+              </div>
+              <span id="custom-minmax-${i}">Loading…</span>
+            </div>
+            <canvas class="sparkline" id="custom-sparkline-${i}" width="800" height="100"></canvas>
+          </div>` : `<div class="not-configured">No sensor assigned. <a href="settings.html" style="color:var(--accent)">Configure in Settings →</a></div>`}
+        </div>
+      `;
+      container.appendChild(card);
+
+      // Attach time range button listeners for custom sensors
+      if (s.entity) {
+        const displayUnit = s.unit === "custom" ? s.customUnit : (s.unit === "none" ? "" : s.unit);
+        card.querySelectorAll(`#custom-time-range-${i} .time-btn`).forEach(btn => {
+          btn.addEventListener("click", () => {
+            card.querySelectorAll(`#custom-time-range-${i} .time-btn`).forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+            const hours = parseInt(btn.dataset.hours);
+            sparklineHours[`custom_${i}`] = hours;
+            fetchCustomSparkline(i, s.entity, displayUnit, hours);
+          });
+        });
+      }
+    }); // end customData.forEach
+  }
+
+  /* ── UPDATE LIVE VALUES ──────────────────────────────────────────────────── */
+  function updateCards() {
+    SENSOR_DEFS.forEach(def => {
+      const cfg = sensorCfg[def.key] || {};
+      if (cfg.active === false) return;
+      const val = liveData[def.key] !== undefined ? parseFloat(liveData[def.key]) : null;
+      const valEl = document.getElementById(`${def.key}-val`);
+      if (valEl) valEl.textContent = val !== null ? `${val}${def.unit === "°C" ? "°" : ""}` : "—";
+      const barEl = document.getElementById(`${def.key}-bar`);
+      if (barEl && val !== null) barEl.style.width = statusBarPct(val, def.absRange[0], def.absRange[1]) + "%";
+      const pillEl = document.getElementById(`${def.key}-pill`);
+      if (pillEl && val !== null) {
+        const pill = getRangePill(val, def.optRange[0], def.optRange[1], def.absRange[0], def.absRange[1]);
+        pillEl.className = `range-pill ${pill.cls}`;
+        pillEl.textContent = pill.label;
+      }
+      const v1El = document.getElementById(`${def.key}-v1`);
+      if (v1El) v1El.textContent = val !== null ? val : "—";
+      const v2El = document.getElementById(`${def.key}-v2`);
+      if (v2El) v2El.textContent = liveData[`${def.key}_secondary`] ?? "—";
+    });
+    // Custom sensor live values
+    customData.forEach((s, i) => {
+      const el = document.getElementById(`custom-val-${i}`);
+      if (el && s.value !== null) el.textContent = s.value;
+    });
+  }
+
+  /* ── SPARKLINE HOURS STATE ───────────────────────────────────────────────── */
+  // Tracks the selected time range per sensor key / custom index
+  const sparklineHours = {};
+
+  /* ── FETCH SPARKLINES ────────────────────────────────────────────────────── */
+  async function fetchSensorSparkline(key, entity, color, unit, hours) {
+    if (!entity) return;
+    const mmEl = document.getElementById(`${key}-minmax`);
+    try {
+      const history = await fetch(`/api/sensors/history?entity=${encodeURIComponent(entity)}&hours=${hours}`).then(r => r.json());
+      drawSparkline(`${key}-sparkline`, history, color);
+      const mm = history.length >= 2
+        ? { min: Math.min(...history.map(d => d.v ?? d)).toFixed(2), max: Math.max(...history.map(d => d.v ?? d)).toFixed(2) }
+        : null;
+      if (mmEl) mmEl.textContent = mm ? `Min: ${mm.min}${unit}  Max: ${mm.max}${unit}` : "Not enough data yet";
+    } catch(e) {
+      console.error("fetchSensorSparkline error:", e);
+      if (mmEl) mmEl.textContent = "Error loading";
+    }
+  }
+
+  async function fetchCustomSparkline(i, entity, displayUnit, hours) {
+    if (!entity) return;
+    const mmEl = document.getElementById(`custom-minmax-${i}`);
+    try {
+      const history = await fetch(`/api/sensors/history?entity=${encodeURIComponent(entity)}&hours=${hours}`).then(r => r.json());
+      drawSparkline(`custom-sparkline-${i}`, history, "#7c4dff");
+      const mm = history.length >= 2
+        ? { min: Math.min(...history.map(d => d.v ?? d)).toFixed(2), max: Math.max(...history.map(d => d.v ?? d)).toFixed(2) }
+        : null;
+      if (mmEl) mmEl.textContent = mm ? `Min: ${mm.min}${displayUnit}  Max: ${mm.max}${displayUnit}` : "Not enough data yet";
+    } catch(e) {
+      console.error("fetchCustomSparkline error:", e);
+      if (mmEl) mmEl.textContent = "Error loading";
+    }
+  }
+
+  // Refresh all sparklines using each sensor's currently selected time range
+  async function fetchSparklines() {
+    for (const def of SENSOR_DEFS) {
+      const cfg = sensorCfg[def.key] || {};
+      if (cfg.active === false || !cfg.primary) continue;
+      const color = "#" + def.gradient.split(",")[0].replace("#","");
+      const hours = sparklineHours[def.key] || 8;
+      await fetchSensorSparkline(def.key, cfg.primary, color, def.unit, hours);
+    }
+    for (let i = 0; i < customData.length; i++) {
+      const s = customData[i];
+      if (!s.showOnSensors || !s.entity) continue;
+      const displayUnit = s.unit === "custom" ? s.customUnit : (s.unit === "none" ? "" : s.unit);
+      const hours = sparklineHours[`custom_${i}`] || 8;
+      await fetchCustomSparkline(i, s.entity, displayUnit, hours);
+    }
+  }
+
+  /* ── POLL LIVE DATA ──────────────────────────────────────────────────────── */
+  async function poll() {
+    try {
+      const [cfg, data] = await Promise.all([
+        fetch("/api/config").then(r => r.json()),
+        fetch("/api/sensors").then(r => r.json()),
+      ]);
+
+      // Connection status
+      const dot   = document.getElementById("conn-dot");
+      const label = document.getElementById("conn-label");
+      if (cfg.connected) {
+        dot.className     = "status-dot connected";
+        label.textContent = "Connected to Home Assistant";
+      } else {
+        dot.className     = "status-dot disconnected";
+        label.textContent = cfg.host ? "Disconnected — retrying…" : "Not configured";
+      }
+
+      // Built-in sensor values
+      SENSOR_DEFS.forEach(def => {
+        const group = data[def.key];
+        if (group && typeof group === "object" && "value" in group) {
+          liveData[def.key] = group.value;
+        } else if (data[def.key] !== undefined) {
+          liveData[def.key] = data[def.key];
+        }
+      });
+
+      // Custom sensors — re-render if count changed (e.g. first load race condition)
+      if (Array.isArray(data.custom)) {
+        const countChanged = data.custom.length !== customData.length;
+        customData = data.custom;
+        if (countChanged) {
+          renderCards();
+          fetchSparklines();
+          return;
+        }
+      }
+
+      updateCards();
+      const now = new Date();
+      document.getElementById("last-sync").textContent =
+        `Last sync: ${now.getHours()}:${String(now.getMinutes()).padStart(2,"0")}`;
+    } catch {}
+  }
+
+  /* ── INIT ────────────────────────────────────────────────────────────────── */
+  async function init() {
+    try {
+      const [settings, data] = await Promise.all([
+        fetch("/api/settings").then(r => r.json()),
+        fetch("/api/sensors").then(r => r.json()),
+      ]);
+      sensorCfg = settings?.sensors || {};
+
+      // Populate liveData and customData before first render
+      SENSOR_DEFS.forEach(def => {
+        const group = data[def.key];
+        if (group && typeof group === "object" && "value" in group) {
+          liveData[def.key] = group.value;
+        }
+      });
+      if (Array.isArray(data.custom)) customData = data.custom;
+    } catch {}
+
+    renderCards();
+    await fetchSparklines();
+
+    // Now start polling (will call updateCards, not re-render)
+    setInterval(poll, 10000);
+    setInterval(fetchSparklines, 60000);
+
+    // Kick off first poll for connection status + sync time
+    poll();
+  }
+
+  init();
+</script>
+</body>
+</html>

@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dosing</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root{--bg:#05070b;--card-bg:#0c111a;--accent:#1e88ff;--accent-soft:#0f4c81;--accent-cyan:#00c9d8;--accent-yellow:#ffb300;--accent-muted:#3f4b5f;--text-main:#ffffff;--text-sub:#a9b4c8;--radius-lg:18px;--radius-md:14px;--shadow-soft:0 14px 30px rgba(0,0,0,0.6);}
+    *{box-sizing:border-box;margin:0;padding:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Roboto",sans-serif;}
+    body{background:radial-gradient(circle at top,#101624 0,#05070b 55%,#020308 100%);color:var(--text-main);min-height:100vh;display:flex;justify-content:center;}
+    a{text-decoration:none;color:inherit;}
+    .app{width:100%;max-width:420px;padding:16px 16px 32px;}
+
+    .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
+    .header-left{display:flex;align-items:center;gap:10px;}
+    .ha-icon{width:32px;height:32px;border-radius:10px;background:radial-gradient(circle at 30% 0,#4fd3ff 0,#1e88ff 40%,#0b2a4a 100%);display:flex;align-items:center;justify-content:center;box-shadow:0 0 18px rgba(79,211,255,0.7);}
+    .ha-icon span{font-size:18px;color:#fff;}
+    .header-title{display:flex;flex-direction:column;}
+    .header-title h1{font-size:18px;letter-spacing:0.12em;text-transform:uppercase;}
+    .header-title span{font-size:11px;color:var(--text-sub);text-transform:uppercase;letter-spacing:0.18em;}
+    .header-gear{width:32px;height:32px;border-radius:999px;background:linear-gradient(135deg,#182233,#0b101a);display:flex;align-items:center;justify-content:center;box-shadow:0 0 10px rgba(0,0,0,0.7);color:var(--text-sub);font-size:18px;}
+
+    .section-label{font-size:11px;text-transform:uppercase;letter-spacing:0.18em;color:var(--text-sub);margin-bottom:10px;margin-top:20px;}
+
+    /* ── PUMP CARD ── */
+    .pump-card{background:radial-gradient(circle at top left,#1b2436 0,#0c111a 55%,#05070b 100%);border-radius:var(--radius-lg);padding:16px;box-shadow:var(--shadow-soft);margin-bottom:14px;position:relative;overflow:hidden;}
+    .pump-card::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at top right,rgba(102,187,106,0.12),transparent 55%);pointer-events:none;}
+
+    .pump-name-row{display:flex;align-items:center;gap:10px;margin-bottom:14px;position:relative;z-index:1;}
+    .pump-icon{width:34px;height:34px;border-radius:999px;background:linear-gradient(135deg,#66bb6a,#43a047);display:flex;align-items:center;justify-content:center;font-size:17px;box-shadow:0 0 12px rgba(102,187,106,0.45);flex-shrink:0;}
+    .pump-label{font-size:15px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;}
+    .pump-entity{font-size:10px;color:var(--text-sub);margin-top:2px;}
+
+    /* volume row */
+    .volume-row{display:flex;align-items:center;justify-content:space-between;background:#0a0f18;border-radius:12px;padding:10px 14px;margin-bottom:12px;position:relative;z-index:1;}
+    .volume-info{display:flex;flex-direction:column;}
+    .volume-label{font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:var(--text-sub);margin-bottom:2px;}
+    .volume-val-row{display:flex;align-items:baseline;gap:4px;}
+    .volume-value{font-size:20px;font-weight:600;color:var(--accent-cyan);}
+    .volume-unit{font-size:10px;color:var(--text-sub);}
+    .volume-edit{display:flex;align-items:center;gap:8px;}
+    .vol-input{width:68px;padding:7px 8px;border-radius:9px;background:#111827;color:white;border:none;font-size:14px;text-align:center;}
+    .save-vol-btn{padding:7px 12px;border:none;border-radius:9px;background:linear-gradient(135deg,#0c2540,#0c3058);color:var(--accent-cyan);font-size:12px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;cursor:pointer;white-space:nowrap;}
+
+    /* control buttons */
+    .control-row{display:flex;gap:10px;position:relative;z-index:1;}
+    .toggle-btn{flex:1;padding:11px 8px;border:none;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;cursor:pointer;transition:background 0.2s,color 0.2s,box-shadow 0.2s;box-shadow:0 6px 16px rgba(0,0,0,0.5);}
+    .toggle-btn.state-off{background:linear-gradient(135deg,#111827,#1a2333);color:var(--text-sub);}
+    .toggle-btn.state-on{background:linear-gradient(135deg,#1a3a1a,#1f4d20);color:#69f07a;box-shadow:0 6px 16px rgba(0,200,83,0.25);}
+    .toggle-dot{width:8px;height:8px;border-radius:999px;background:currentColor;flex-shrink:0;}
+    .dose-btn{flex:1;padding:11px 8px;border:none;border-radius:var(--radius-md);background:linear-gradient(135deg,#0c2540,#0c3058);color:var(--accent-cyan);display:flex;align-items:center;justify-content:center;gap:6px;font-size:13px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;cursor:pointer;box-shadow:0 6px 16px rgba(0,0,0,0.5);transition:opacity 0.2s;}
+    .dose-btn:disabled{opacity:0.35;cursor:not-allowed;}
+
+    /* schedule section inside pump card */
+    .sched-section{margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.06);position:relative;z-index:1;}
+    .sched-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+    .sched-row-label{font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-sub);}
+
+    /* reusable pill toggle */
+    .pill-toggle{position:relative;width:42px;height:24px;flex-shrink:0;}
+    .pill-toggle input{opacity:0;position:absolute;width:0;height:0;}
+    .pill-track{position:absolute;inset:0;border-radius:999px;background:#1a2333;transition:background 0.22s;cursor:pointer;}
+    .pill-track.active{background:var(--accent);}
+    .pill-thumb{position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:999px;background:#fff;transition:transform 0.22s;box-shadow:0 1px 4px rgba(0,0,0,0.4);pointer-events:none;}
+    .pill-track.active .pill-thumb{transform:translateX(18px);}
+    .pill-label{font-size:11px;color:var(--text-sub);min-width:26px;text-align:right;}
+
+    .time-fields{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
+    .field-group{display:flex;flex-direction:column;gap:4px;}
+    .field-group label{font-size:10px;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-sub);}
+    .field-group input,.field-group select{padding:9px 10px;border-radius:10px;background:#111827;color:white;border:none;font-size:14px;width:100%;}
+
+    .interval-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
+    .offset-row{margin-bottom:4px;}
+    .offset-hint{font-size:10px;color:var(--text-sub);margin-top:4px;line-height:1.4;}
+
+    .sched-save-btn{width:100%;padding:10px;border:none;border-radius:var(--radius-md);background:linear-gradient(135deg,#1e88ff,#0f4c81);color:white;font-size:13px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;cursor:pointer;margin-top:10px;box-shadow:0 6px 16px rgba(0,0,0,0.5);}
+
+    /* ── CALIBRATION CARD ── */
+    .cal-card{background:radial-gradient(circle at top left,#1b2436 0,#0c111a 55%,#05070b 100%);border-radius:var(--radius-lg);padding:18px;box-shadow:var(--shadow-soft);position:relative;overflow:hidden;}
+    .cal-card::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at top right,rgba(79,211,255,0.12),transparent 55%);pointer-events:none;}
+    .cal-title{font-size:13px;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px;color:var(--text-sub);position:relative;z-index:1;}
+    .cal-desc{font-size:12px;color:var(--text-sub);margin-bottom:14px;line-height:1.5;position:relative;z-index:1;}
+    .cal-field{margin-bottom:12px;position:relative;z-index:1;}
+    .cal-field label{font-size:11px;color:var(--text-sub);text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:4px;}
+    .cal-field select,.cal-field input{width:100%;padding:10px;border-radius:10px;background:#111827;color:white;border:none;font-size:14px;}
+    .cal-multiplier-chip{display:none;align-items:center;gap:6px;font-size:11px;color:var(--text-sub);margin-bottom:12px;padding:8px 10px;background:rgba(0,201,216,0.07);border-radius:8px;position:relative;z-index:1;}
+    .cal-multiplier-chip span{color:var(--accent-cyan);font-weight:600;}
+    .cal-dose-btn{width:100%;padding:12px;border:none;border-radius:var(--radius-md);background:linear-gradient(135deg,#0c2540,#0c3058);color:var(--accent-cyan);font-size:14px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;cursor:pointer;margin-bottom:12px;box-shadow:0 6px 16px rgba(0,0,0,0.5);position:relative;z-index:1;}
+    .cal-dose-btn:disabled{opacity:0.4;cursor:not-allowed;}
+    .cal-save-btn{width:100%;padding:12px;border:none;border-radius:var(--radius-md);background:linear-gradient(135deg,#1e88ff,#0f4c81);color:white;font-size:14px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;cursor:pointer;box-shadow:0 8px 20px rgba(0,0,0,0.6);position:relative;z-index:1;}
+    .cal-result{margin-top:10px;font-size:12px;color:var(--accent-cyan);display:none;position:relative;z-index:1;padding:8px 10px;background:rgba(0,201,216,0.08);border-radius:8px;}
+
+    .empty-msg{font-size:13px;color:var(--text-sub);text-align:center;padding:20px 0;}
+    .footer{margin-top:18px;font-size:11px;color:var(--text-sub);display:flex;justify-content:space-between;opacity:0.8;}
+    .footer-left{display:flex;align-items:center;}
+    .status-dot{width:8px;height:8px;border-radius:999px;margin-right:6px;transition:background 0.4s,box-shadow 0.4s;}
+    .status-dot.connected{background:#00c853;box-shadow:0 0 8px rgba(0,200,83,0.9);}
+    .status-dot.disconnected{background:#ef5350;box-shadow:0 0 8px rgba(239,83,80,0.6);}
+    .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:#0c111a;border-radius:20px;padding:10px 18px;color:white;opacity:0;transition:opacity 0.2s,transform 0.2s;pointer-events:none;display:flex;align-items:center;gap:8px;box-shadow:var(--shadow-soft);z-index:100;}
+    .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+    .toast-dot{width:6px;height:6px;border-radius:999px;}
+  </style>
+</head>
+<body>
+<div class="app">
+  <header class="header">
+    <div class="header-left">
+      <a href="index.html" class="ha-icon"><span>⌂</span></a>
+      <div class="header-title"><h1>DOSING</h1><span>calibration & control</span></div>
+    </div>
+    <a href="settings.html" class="header-gear">⚙</a>
+  </header>
+
+  <div class="section-label">Manual Control &amp; Schedule</div>
+  <div id="pump-container"><div class="empty-msg">Loading pumps…</div></div>
+
+  <div class="section-label">Calibration</div>
+  <div class="cal-card">
+    <div class="cal-title">Pump Calibration</div>
+    <div class="cal-desc">
+      Select a pump, click <strong style="color:var(--accent-cyan)">Dose 10 mL</strong> to run it,
+      then enter the actual measured output and save. The new multiplier is written back to your HA
+      <code style="color:var(--accent-cyan)">input_number</code>.
+    </div>
+
+    <div class="cal-field">
+      <label>Pump</label>
+      <select id="calPumpSelect"></select>
+    </div>
+
+    <div class="cal-multiplier-chip" id="cal-chip">
+      Current multiplier: <span id="cal-chip-val">—</span> sec/mL
+    </div>
+
+    <button class="cal-dose-btn" id="cal-dose-btn">▶ Dose 10 mL</button>
+
+    <div class="cal-field">
+      <label>Measured Output (mL)</label>
+      <input id="measuredMl" type="number" step="0.1" min="0.1" placeholder="e.g. 9.8">
+    </div>
+
+    <button class="cal-save-btn" id="cal-save-btn">💾 Save Calibration</button>
+    <div class="cal-result" id="cal-result"></div>
+  </div>
+
+  <div class="toast" id="toast"><div class="toast-dot"></div><span id="toast-text">Saved</span></div>
+  <footer class="footer">
+    <div class="footer-left">
+      <span class="status-dot disconnected" id="conn-dot"></span>
+      <span id="conn-label">Connecting…</span>
+    </div>
+    <span>Last sync: <span id="last-sync">—</span></span>
+  </footer>
+</div>
+
+<script>
+  let PUMPS = [];
+
+  // ── SCHEDULE STATE (keyed by pump id) ─────────────────────────────────────
+  // Holds the live form values before saving, separate from PUMPS data
+  const schedState = {};
+
+  // ── LOAD ──────────────────────────────────────────────────────────────────
+  async function loadPumps() {
+    try {
+      const [cfg, pumps] = await Promise.all([
+        fetch("/api/config").then(r => r.json()),
+        fetch("/api/dosing").then(r => r.json()),
+      ]);
+      updateConnectionStatus(cfg);
+      PUMPS = pumps;
+      render();
+    } catch {
+      updateConnectionStatus(null);
+      document.getElementById("pump-container").innerHTML =
+        `<div class="empty-msg">Configure dosing pumps in <a href="settings.html" style="color:var(--accent)">Settings →</a></div>`;
+    }
+  }
+
+  function updateConnectionStatus(cfg) {
+    const dot   = document.getElementById("conn-dot");
+    const label = document.getElementById("conn-label");
+    if (cfg?.connected) {
+      dot.className     = "status-dot connected";
+      label.textContent = "Connected to Home Assistant";
+    } else {
+      dot.className     = "status-dot disconnected";
+      label.textContent = cfg?.host ? "Disconnected — retrying…" : "Not configured";
+    }
+  }
+
+  // ── RENDER ─────────────────────────────────────────────────────────────────
+  function render() {
+    renderPumps();
+    renderCalSelect();
+    const now = new Date();
+    document.getElementById("last-sync").textContent =
+      `${now.getHours()}:${String(now.getMinutes()).padStart(2,"0")}`;
+  }
+
+  function renderPumps() {
+    const c = document.getElementById("pump-container");
+    c.innerHTML = "";
+    if (!PUMPS.length) {
+      c.innerHTML = `<div class="empty-msg">No dosing pumps configured. <a href="settings.html" style="color:var(--accent)">Go to Settings →</a></div>`;
+      return;
+    }
+    PUMPS.forEach(p => buildPumpCard(p, c));
+  }
+
+  function buildPumpCard(p, container) {
+    // Seed schedule state from pump data if not already set
+    if (!schedState[p.id]) {
+      const s = p.schedule || {};
+      schedState[p.id] = {
+        enabled:      !!s.enabled,
+        allHours:     s.allHours !== false,
+        startTime:    s.startTime    || "08:00",
+        endTime:      s.endTime      || "22:00",
+        interval:     s.interval     || 60,
+        intervalUnit: s.intervalUnit || "minutes",
+        offsetMinutes: s.offsetMinutes || 0,
+      };
+    }
+    const ss = schedState[p.id];
+    const isOn = p.switchState === "on";
+
+    const card = document.createElement("div");
+    card.className = "pump-card";
+    card.id = `pump-card-${p.id}`;
+
+    // ── static HTML (no interactive toggling via innerHTML) ──
+    card.innerHTML = `
+      <div class="pump-name-row">
+        <div class="pump-icon">🧪</div>
+        <div>
+          <div class="pump-label">${p.name}</div>
+        <!--  <div class="pump-entity">${p.triggerEntity || p.entity || "—"}</div>  -->
+        </div>
+      </div>
+
+      <!-- DOSE VOLUME -->
+      <div class="volume-row">
+        <div class="volume-info">
+          <div class="volume-label">Dose Volume${p.volumeEntity ? " · HA" : ""}</div>
+          <div class="volume-val-row">
+            <span class="volume-value" id="vol-display-${p.id}">${p.volume > 0 ? p.volume : "—"}</span>
+            <span class="volume-unit"> mL</span>
+          </div>
+        </div>
+        <div class="volume-edit">
+          <input class="vol-input" id="vol-input-${p.id}" type="number" step="0.1" min="0.1"
+            value="${p.volume || ""}" placeholder="mL">
+          <button class="save-vol-btn" data-pump="${p.id}">Save</button>
+        </div>
+      </div>
+
+      <!-- CONTROL BUTTONS -->
+      <div class="control-row">
+        <button class="toggle-btn state-${isOn ? "on" : "off"}" id="toggle-btn-${p.id}" data-pump="${p.id}">
+          <span class="toggle-dot"></span>
+          <span class="toggle-lbl">${isOn ? "ON" : "OFF"}</span>
+        </button>
+        <button class="dose-btn" id="dose-btn-${p.id}" data-pump="${p.id}">
+          ▶ Run One Dose
+        </button>
+      </div>
+
+      <!-- SCHEDULE -->
+      <div class="sched-section">
+         <div class="sched-row">
+          <span class="sched-row-label">All Hours</span>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="pill-label" id="sched-allhours-lbl-${p.id}">${ss.allHours ? "ON" : "OFF"}</span>
+            <div class="pill-toggle">
+              <div class="pill-track ${ss.allHours ? "active" : ""}" id="sched-allhours-track-${p.id}"
+                data-pump="${p.id}" data-toggle="allHours">
+                <div class="pill-thumb"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="sched-time-fields-${p.id}" style="display:${ss.allHours ? "none" : "block"}">
+          <div class="time-fields">
+            <div class="field-group">
+              <label>Start Time</label>
+              <input type="time" id="sched-start-${p.id}" value="${ss.startTime}">
+            </div>
+            <div class="field-group">
+              <label>End Time</label>
+              <input type="time" id="sched-end-${p.id}" value="${ss.endTime}">
+            </div>
+          </div>
+        </div>
+
+        <div class="interval-row">
+          <div class="field-group">
+            <label>Interval</label>
+            <input type="number" id="sched-interval-${p.id}" min="1" value="${ss.interval}">
+          </div>
+          <div class="field-group">
+            <label>Unit</label>
+            <select id="sched-unit-${p.id}">
+              <option value="minutes" ${ss.intervalUnit === "minutes" ? "selected" : ""}>Minutes</option>
+              <option value="hours"   ${ss.intervalUnit === "hours"   ? "selected" : ""}>Hours</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="offset-row field-group">
+          <label>Offset from Hour (minutes)</label>
+          <input type="number" id="sched-offset-${p.id}" min="0" max="59" value="${ss.offsetMinutes}">
+          <div class="offset-hint">e.g. Calcium at 15 min, Alkalinity at 45 min → 30 min apart</div>
+        </div>
+
+        <button class="sched-save-btn" data-pump="${p.id}">💾 Save Schedule</button>
+      </div>
+    `;
+
+    container.appendChild(card);
+
+    // ── Attach event listeners via JS (avoids disabled-in-innerHTML bug) ──
+
+    // Save volume
+    card.querySelector(`.save-vol-btn[data-pump="${p.id}"]`)
+      .addEventListener("click", () => saveVolume(p.id));
+
+    // Toggle pump (priming)
+    card.querySelector(`#toggle-btn-${p.id}`)
+      .addEventListener("click", function() { togglePump(p.id, this); });
+
+    // Run one dose — set disabled via JS, never via HTML attribute
+    const doseBtn = card.querySelector(`#dose-btn-${p.id}`);
+    if (!p.triggerEntity) {
+      doseBtn.disabled = true;
+      doseBtn.title = "Configure trigger boolean in Settings";
+    }
+    doseBtn.addEventListener("click", function() { runOneDose(p.id, this); });
+
+    // Pill toggles
+    card.querySelectorAll(".pill-track[data-toggle]").forEach(track => {
+      track.addEventListener("click", () => {
+        const key = track.dataset.toggle; // "enabled" or "allHours"
+        schedState[p.id][key] = !schedState[p.id][key];
+        const val = schedState[p.id][key];
+        track.classList.toggle("active", val);
+        document.getElementById(`sched-${key === "enabled" ? "enabled" : "allhours"}-lbl-${p.id}`).textContent = val ? "ON" : "OFF";
+        if (key === "allHours") {
+          document.getElementById(`sched-time-fields-${p.id}`).style.display = val ? "none" : "block";
+        }
+      });
+    });
+
+    // Save schedule
+    card.querySelector(`.sched-save-btn[data-pump="${p.id}"]`)
+      .addEventListener("click", () => saveSchedule(p.id));
+  }
+
+  // ── MANUAL TOGGLE ─────────────────────────────────────────────────────────
+  async function togglePump(id, btn) {
+    const isOn = btn.classList.contains("state-on");
+    const newState = isOn ? "off" : "on";
+    btn.classList.remove("state-on", "state-off");
+    btn.classList.add(`state-${newState}`);
+    btn.querySelector(".toggle-lbl").textContent = newState.toUpperCase();
+    await fetch(`/api/dosing/toggle?pump=${id}&state=${newState}`, { method:"POST" });
+    showToast(newState === "on" ? "Pump ON — priming mode" : "Pump OFF");
+  }
+
+  // ── RUN ONE DOSE ──────────────────────────────────────────────────────────
+  async function runOneDose(id, btn) {
+    btn.disabled = true;
+    btn.textContent = "⏳ Dosing…";
+    try {
+      const res = await fetch(`/api/dosing/dose?pump=${id}`, { method:"POST" }).then(r => r.json());
+      if (res.ok) {
+        showToast("Dose triggered via HA");
+        setTimeout(() => { btn.disabled = false; btn.textContent = "▶ Run One Dose"; }, 3000);
+      } else {
+        showToast(res.error || "Failed to trigger dose", true);
+        btn.disabled = false; btn.textContent = "▶ Run One Dose";
+      }
+    } catch {
+      showToast("Error triggering dose", true);
+      btn.disabled = false; btn.textContent = "▶ Run One Dose";
+    }
+  }
+
+  // ── SAVE VOLUME ───────────────────────────────────────────────────────────
+  async function saveVolume(id) {
+    const newVal = parseFloat(document.getElementById(`vol-input-${id}`).value);
+    if (!newVal || newVal <= 0) { showToast("Enter a valid volume", true); return; }
+    await fetch(`/api/dosing/setVolume?pump=${id}&ml=${newVal}`, { method:"POST" });
+    document.getElementById(`vol-display-${id}`).textContent = newVal;
+    const p = PUMPS.find(p => p.id === id);
+    if (p) p.volume = newVal;
+    showToast("Volume saved to HA");
+  }
+
+  // ── SAVE SCHEDULE ─────────────────────────────────────────────────────────
+  async function saveSchedule(id) {
+    const ss = schedState[id];
+    const schedule = {
+      enabled:       ss.enabled,
+      allHours:      ss.allHours,
+      startTime:     document.getElementById(`sched-start-${id}`)?.value  || "08:00",
+      endTime:       document.getElementById(`sched-end-${id}`)?.value    || "22:00",
+      interval:      parseFloat(document.getElementById(`sched-interval-${id}`)?.value) || 60,
+      intervalUnit:  document.getElementById(`sched-unit-${id}`)?.value   || "minutes",
+      offsetMinutes: parseInt(document.getElementById(`sched-offset-${id}`)?.value) || 0,
+    };
+    // Update schedState with current typed values too
+    Object.assign(schedState[id], schedule);
+
+    await fetch("/api/dosing/schedule", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ pump: id, schedule }),
+    });
+    showToast("Schedule saved");
+  }
+
+  // ── CALIBRATION ───────────────────────────────────────────────────────────
+  function renderCalSelect() {
+    const sel = document.getElementById("calPumpSelect");
+    sel.innerHTML = "";
+    PUMPS.forEach(p => {
+      const opt = document.createElement("option");
+      opt.value = p.id; opt.textContent = p.name;
+      sel.appendChild(opt);
+    });
+    updateCalChip();
+  }
+
+  function updateCalChip() {
+    const pumpId = parseInt(document.getElementById("calPumpSelect").value);
+    const p = PUMPS.find(p => p.id === pumpId);
+    const chip = document.getElementById("cal-chip");
+    if (p && p.multiplier > 0) {
+      document.getElementById("cal-chip-val").textContent = p.multiplier.toFixed(4);
+      chip.style.display = "flex";
+    } else {
+      chip.style.display = "none";
+    }
+  }
+
+  document.getElementById("calPumpSelect").addEventListener("change", updateCalChip);
+
+  // "Dose 10 mL" — fires the trigger boolean so the HA automation runs 10 × multiplier seconds
+  document.getElementById("cal-dose-btn").addEventListener("click", async function() {
+    const pumpId = parseInt(document.getElementById("calPumpSelect").value);
+    const p = PUMPS.find(p => p.id === pumpId);
+    if (!p) return;
+    if (!p.triggerEntity) { showToast("No trigger boolean configured in Settings", true); return; }
+    this.disabled = true; this.textContent = "⏳ Running…";
+    // Temporarily override volume to 10 mL for this dose
+    await fetch(`/api/dosing/calDose?pump=${pumpId}`, { method:"POST" });
+    showToast("Dosing 10 mL — measure the output");
+    const btn = this;
+    setTimeout(() => { btn.disabled = false; btn.textContent = "▶ Dose 10 mL"; }, 4000);
+  });
+
+  // Save calibration: newMultiplier = (10 / measuredMl) * currentMultiplier
+  document.getElementById("cal-save-btn").addEventListener("click", async function() {
+    const pumpId   = parseInt(document.getElementById("calPumpSelect").value);
+    const measured = parseFloat(document.getElementById("measuredMl").value);
+    const p        = PUMPS.find(p => p.id === pumpId);
+    if (!p) { showToast("Select a pump", true); return; }
+    if (!measured || measured <= 0) { showToast("Enter the measured output", true); return; }
+
+    const currentMultiplier = p.multiplier > 0 ? p.multiplier : 1;
+    const newMultiplier = (10 / measured) * currentMultiplier;
+    const newMlPerSec   = 1 / newMultiplier;
+
+    const res = await fetch(`/api/dosing/calibrate?pump=${pumpId}&multiplier=${newMultiplier.toFixed(6)}`, {
+      method:"POST"
+    }).then(r => r.json());
+
+    const resultEl = document.getElementById("cal-result");
+    resultEl.textContent = `✓ New multiplier: ${newMultiplier.toFixed(4)} sec/mL  (${newMlPerSec.toFixed(4)} mL/s)`;
+    resultEl.style.display = "block";
+
+    p.multiplier = newMultiplier;
+    updateCalChip();
+    showToast("Calibration saved to HA");
+  });
+
+  // ── TOAST ─────────────────────────────────────────────────────────────────
+  function showToast(msg, isError = false) {
+    const t  = document.getElementById("toast");
+    document.getElementById("toast-text").textContent = msg;
+    t.querySelector(".toast-dot").style.background = isError ? "#ef5350" : "#00c853";
+    t.classList.add("show");
+    setTimeout(() => t.classList.remove("show"), 2500);
+  }
+
+  // ── POLL ──────────────────────────────────────────────────────────────────
+  async function pollPumps() {
+    try {
+      const [cfg, data] = await Promise.all([
+        fetch("/api/config").then(r => r.json()),
+        fetch("/api/dosing").then(r => r.json()),
+      ]);
+      updateConnectionStatus(cfg);
+      data.forEach(p => {
+        const isOn = p.switchState === "on";
+        const btn  = document.getElementById(`toggle-btn-${p.id}`);
+        if (btn) {
+          btn.classList.remove("state-on", "state-off");
+          btn.classList.add(`state-${isOn ? "on" : "off"}`);
+          const lbl = btn.querySelector(".toggle-lbl");
+          if (lbl) lbl.textContent = isOn ? "ON" : "OFF";
+        }
+        const disp = document.getElementById(`vol-display-${p.id}`);
+        if (disp && p.volume > 0) disp.textContent = p.volume;
+        const pump = PUMPS.find(pp => pp.id === p.id);
+        if (pump) { pump.switchState = p.switchState; pump.volume = p.volume; pump.multiplier = p.multiplier; }
+      });
+      const now = new Date();
+      document.getElementById("last-sync").textContent =
+        `${now.getHours()}:${String(now.getMinutes()).padStart(2,"0")}`;
+    } catch {}
+  }
+
+  loadPumps();
+  setInterval(pollPumps, 15000);
+</script>
+</body>
+</html>

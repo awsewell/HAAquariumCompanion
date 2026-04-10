@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Aquarium Control</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root {
+      --bg: #05070b; --card-bg: #0c111a; --accent: #1e88ff; --accent-soft: #0f4c81;
+      --accent-cyan: #00c9d8; --accent-yellow: #ffb300; --accent-muted: #3f4b5f;
+      --text-main: #ffffff; --text-sub: #a9b4c8; --radius-lg: 18px; --radius-md: 14px;
+      --shadow-soft: 0 14px 30px rgba(0,0,0,0.6);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Roboto", sans-serif; }
+    body { background: radial-gradient(circle at top, #101624 0, #05070b 55%, #020308 100%); color: var(--text-main); min-height: 100vh; display: flex; justify-content: center; }
+    a { text-decoration: none; color: inherit; }
+    .app { width: 100%; max-width: 420px; padding: 16px 16px 24px; }
+
+    .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+    .header-left { display: flex; align-items: center; gap: 10px; }
+    .ha-icon { width: 32px; height: 32px; border-radius: 10px; background: radial-gradient(circle at 30% 0, #4fd3ff 0, #1e88ff 40%, #0b2a4a 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 18px rgba(79,211,255,0.7); font-size: 18px; color: #fff; }
+    .header-title { display: flex; flex-direction: column; }
+    .header-title h1 { font-size: 18px; letter-spacing: 0.12em; text-transform: uppercase; }
+    .header-title span { font-size: 11px; color: var(--text-sub); text-transform: uppercase; letter-spacing: 0.18em; }
+    .header-gear { width: 32px; height: 32px; border-radius: 999px; background: linear-gradient(135deg, #182233, #0b101a); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 10px rgba(0,0,0,0.7); color: var(--text-sub); font-size: 18px; }
+
+    .sensor-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 22px; }
+    .sensor-card { background: radial-gradient(circle at top left, #1b2436 0, #0c111a 55%, #05070b 100%); border-radius: var(--radius-lg); padding: 12px 12px 14px; box-shadow: var(--shadow-soft); position: relative; overflow: hidden; }
+    .sensor-card::before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at top right, rgba(79,211,255,0.18), transparent 55%); opacity: 0.9; pointer-events: none; }
+    .sensor-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; position: relative; z-index: 1; }
+    .sensor-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.16em; color: var(--text-sub); }
+    .sensor-icon { width: 26px; height: 26px; border-radius: 999px; display: flex; align-items: center; justify-content: center; font-size: 15px; color: #fff; }
+    .sensor-icon.temp { background: linear-gradient(135deg, #1e88ff, #00c9d8); }
+    .sensor-icon.ph   { background: linear-gradient(135deg, #00c9d8, #00a0b8); }
+    .sensor-icon.orp  { background: linear-gradient(135deg, #ffb300, #ff7043); }
+    .sensor-icon.kh   { background: linear-gradient(135deg, #7e8ba8, #4f5b78); }
+    .sensor-icon.custom { background: linear-gradient(135deg, #7c4dff, #5c35cc); }
+    .sensor-value { position: relative; z-index: 1; font-size: 22px; font-weight: 600; margin-bottom: 2px; }
+    .sensor-unit  { position: relative; z-index: 1; font-size: 11px; color: var(--text-sub); text-transform: uppercase; letter-spacing: 0.12em; }
+
+    .section-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.18em; color: var(--text-sub); margin-bottom: 10px; }
+    .nav-list { display: flex; flex-direction: column; gap: 10px; }
+    .nav-button { width: 100%; border: none; outline: none; border-radius: var(--radius-md); padding: 12px 14px; display: flex; align-items: center; justify-content: space-between; background: linear-gradient(135deg, #0c111a, #111827); color: var(--text-main); box-shadow: 0 10px 22px rgba(0,0,0,0.7); cursor: pointer; position: relative; overflow: hidden; }
+    .nav-button::before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at left, rgba(30,136,255,0.22), transparent 55%); opacity: 0.9; pointer-events: none; }
+    .nav-left { display: flex; align-items: center; gap: 12px; position: relative; z-index: 1; }
+    .nav-icon { width: 30px; height: 30px; border-radius: 999px; display: flex; align-items: center; justify-content: center; font-size: 16px; color: #fff; }
+    .nav-icon.lighting { background: linear-gradient(135deg, #1e88ff, #00c9d8); }
+    .nav-icon.pumps    { background: linear-gradient(135deg, #00c9d8, #00acc1); }
+    .nav-icon.sensors  { background: linear-gradient(135deg, #26c6da, #1e88e5); }
+    .nav-icon.dosing   { background: linear-gradient(135deg, #66bb6a, #43a047); }
+    .nav-icon.switches { background: linear-gradient(135deg, #ef5350, #d32f2f); }
+    .nav-label { font-size: 15px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; }
+    .nav-chevron { position: relative; z-index: 1; font-size: 18px; color: var(--accent-muted); }
+
+    .footer { margin-top: 18px; font-size: 11px; color: var(--text-sub); display: flex; justify-content: space-between; opacity: 0.8; }
+    .footer-left { display: flex; align-items: center; }
+    .status-dot { width: 8px; height: 8px; border-radius: 999px; margin-right: 6px; transition: background 0.4s, box-shadow 0.4s; }
+    .status-dot.connected    { background: #00c853; box-shadow: 0 0 8px rgba(0,200,83,0.9); }
+    .status-dot.disconnected { background: #ef5350; box-shadow: 0 0 8px rgba(239,83,80,0.6); }
+
+    @media (max-width: 360px) { .sensor-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<div class="app">
+  <header class="header">
+    <div class="header-left">
+      <div class="ha-icon"><span>⌂</span></div>
+      <div class="header-title">
+        <h1>AQUARIUM CONTROL</h1>
+        <span>home assistant</span>
+      </div>
+    </div>
+    <a href="settings.html" class="header-gear" title="Settings">⚙</a>
+  </header>
+
+  <section class="sensor-grid" id="sensor-grid"></section>
+
+  <div class="section-label">Controls</div>
+  <nav class="nav-list">
+    <a href="lighting.html" class="nav-button">
+      <div class="nav-left"><div class="nav-icon lighting">💡</div><span class="nav-label">Lighting</span></div>
+      <span class="nav-chevron">›</span>
+    </a>
+    <a href="pumps.html" class="nav-button">
+      <div class="nav-left"><div class="nav-icon pumps">🌊</div><span class="nav-label">Pumps</span></div>
+      <span class="nav-chevron">›</span>
+    </a>
+    <a href="sensors.html" class="nav-button">
+      <div class="nav-left"><div class="nav-icon sensors">📈</div><span class="nav-label">Sensors</span></div>
+      <span class="nav-chevron">›</span>
+    </a>
+    <a href="dosing.html" class="nav-button">
+      <div class="nav-left"><div class="nav-icon dosing">🧪</div><span class="nav-label">Dosing</span></div>
+      <span class="nav-chevron">›</span>
+    </a>
+    <a href="switches.html" class="nav-button">
+      <div class="nav-left"><div class="nav-icon switches">⏻</div><span class="nav-label">Switches</span></div>
+      <span class="nav-chevron">›</span>
+    </a>
+  </nav>
+
+  <footer class="footer">
+    <div class="footer-left">
+      <span class="status-dot disconnected" id="conn-dot"></span>
+      <span id="conn-label">Connecting…</span>
+    </div>
+    <span id="last-sync">—</span>
+  </footer>
+</div>
+
+<script>
+  const BUILTIN_DEFS = [
+    { key:"temperature", label:"Temp",  icon:"🌡", cls:"temp", unitSuffix:"°",  unitLabel:"celsius" },
+    { key:"ph",          label:"pH",    icon:"⚗", cls:"ph",   unitSuffix:"",   unitLabel:"acidity" },
+    { key:"orp",         label:"ORP",   icon:"⚡", cls:"orp",  unitSuffix:"",   unitLabel:"mV"      },
+    { key:"kh",          label:"KH",    icon:"💧", cls:"kh",   unitSuffix:"",   unitLabel:"dKH"     },
+  ];
+
+  function renderGrid(sensorData) {
+    const grid = document.getElementById("sensor-grid");
+    grid.innerHTML = "";
+
+    // Built-in sensors — only show if active
+    BUILTIN_DEFS.forEach(def => {
+      const group = sensorData[def.key];
+      if (!group || group.active === false) return;
+      const val = group.value !== null && group.value !== undefined ? group.value : null;
+      const display = val !== null ? `${val}${def.unitSuffix}` : "—";
+      grid.innerHTML += `
+        <article class="sensor-card">
+          <div class="sensor-header">
+            <span class="sensor-label">${def.label}</span>
+            <div class="sensor-icon ${def.cls}">${def.icon}</div>
+          </div>
+          <div class="sensor-value">${display}</div>
+          <div class="sensor-unit">${def.unitLabel}</div>
+        </article>`;
+    });
+
+    // Custom sensors — only show if showOnHome
+    const custom = Array.isArray(sensorData.custom) ? sensorData.custom : [];
+    custom.forEach(s => {
+      if (!s.showOnHome) return;
+      const val = s.value !== null && s.value !== undefined ? s.value : "—";
+      const unit = s.unit === "custom" ? s.customUnit : (s.unit === "none" ? "" : s.unit);
+      grid.innerHTML += `
+        <article class="sensor-card">
+          <div class="sensor-header">
+            <span class="sensor-label">${s.name || "Sensor"}</span>
+            <div class="sensor-icon custom">📡</div>
+          </div>
+          <div class="sensor-value">${val}</div>
+          <div class="sensor-unit">${unit}</div>
+        </article>`;
+    });
+
+    // If nothing to show, render a placeholder
+    if (!grid.innerHTML.trim()) {
+      grid.innerHTML = `<article class="sensor-card" style="grid-column:1/-1">
+        <div class="sensor-header"><span class="sensor-label">Sensors</span></div>
+        <div class="sensor-value" style="font-size:14px;color:var(--text-sub)">None active</div>
+        <div class="sensor-unit"><a href="settings.html" style="color:var(--accent)">Configure →</a></div>
+      </article>`;
+    }
+  }
+
+  async function poll() {
+    try {
+      const [cfg, data] = await Promise.all([
+        fetch("/api/config").then(r => r.json()),
+        fetch("/api/sensors").then(r => r.json()),
+      ]);
+
+      // Connection status
+      const dot   = document.getElementById("conn-dot");
+      const label = document.getElementById("conn-label");
+      if (cfg.connected) {
+        dot.className     = "status-dot connected";
+        label.textContent = "Connected to Home Assistant";
+      } else {
+        dot.className     = "status-dot disconnected";
+        label.textContent = cfg.host ? "Disconnected — retrying…" : "Not configured";
+      }
+
+      renderGrid(data);
+
+      const now = new Date();
+      document.getElementById("last-sync").textContent =
+        `Last sync: ${now.getHours()}:${String(now.getMinutes()).padStart(2,"0")}`;
+    } catch (e) {
+      document.getElementById("conn-dot").className    = "status-dot disconnected";
+      document.getElementById("conn-label").textContent = "Server offline";
+    }
+  }
+
+  poll();
+  setInterval(poll, 15000);
+</script>
+</body>
+</html>

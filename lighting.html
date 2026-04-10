@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Lighting</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <style>
+    :root {
+      --bg: #05070b;
+      --card-bg: #0c111a;
+      --accent: #1e88ff;
+      --accent-soft: #0f4c81;
+      --accent-cyan: #00c9d8;
+      --accent-yellow: #ffb300;
+      --accent-muted: #3f4b5f;
+      --text-main: #ffffff;
+      --text-sub: #a9b4c8;
+      --radius-lg: 18px;
+      --radius-md: 14px;
+      --shadow-soft: 0 14px 30px rgba(0, 0, 0, 0.6);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Roboto", sans-serif;
+    }
+
+    body {
+      background: radial-gradient(circle at top, #101624 0, #05070b 55%, #020308 100%);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+    }
+
+    a {
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 420px;
+      padding: 16px 16px 24px;
+    }
+
+    /* HEADER */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .ha-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      background: radial-gradient(circle at 30% 0, #4fd3ff 0, #1e88ff 40%, #0b2a4a 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 18px rgba(79, 211, 255, 0.7);
+      color: white;
+      font-size: 18px;
+    }
+
+    .header-title {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .header-title h1 {
+      font-size: 18px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .header-title span {
+      font-size: 11px;
+      color: var(--text-sub);
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+    }
+
+    .header-gear {
+      width: 32px;
+      height: 32px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #182233, #0b101a);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.7);
+      color: var(--text-sub);
+      font-size: 18px;
+    }
+
+    /* SECTION LABEL */
+    .section-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: var(--text-sub);
+      margin-bottom: 10px;
+      margin-top: 20px;
+    }
+
+    /* COLLAPSIBLE CHANNEL CARD */
+    .channel-card {
+      background: radial-gradient(circle at top left, #1b2436 0, #0c111a 55%, #05070b 100%);
+      border-radius: var(--radius-lg);
+      padding: 14px 16px;
+      box-shadow: var(--shadow-soft);
+      margin-bottom: 14px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .channel-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at top right, rgba(79, 211, 255, 0.18), transparent 55%);
+      opacity: 0.9;
+      pointer-events: none;
+    }
+
+    .channel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+      z-index: 1;
+      cursor: pointer;
+    }
+
+    .channel-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .channel-dot {
+      width: 22px;
+      height: 22px;
+      border-radius: 999px;
+      box-shadow: 0 0 10px rgba(79, 211, 255, 0.6);
+    }
+
+    .channel-name {
+      font-size: 15px;
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .chevron {
+      font-size: 20px;
+      color: var(--accent-muted);
+      transition: transform 0.25s ease;
+    }
+
+    .chevron.open {
+      transform: rotate(90deg);
+    }
+
+    /* COLLAPSIBLE CONTENT */
+    .channel-content {
+      display: none;
+      margin-top: 14px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* INPUTS */
+    .field-label {
+      font-size: 11px;
+      color: var(--text-sub);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin-bottom: 4px;
+    }
+
+    input[type="time"],
+    input[type="number"] {
+      width: 100%;
+      padding: 10px;
+      border-radius: 10px;
+      background: #111827;
+      color: white;
+      border: none;
+      margin-bottom: 12px;
+      font-size: 14px;
+    }
+
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    input[type="range"] {
+      flex: 1;
+      height: 4px;
+      background: #1a2333;
+      border-radius: 2px;
+      outline: none;
+      -webkit-appearance: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      background: var(--accent);
+      box-shadow: 0 0 6px rgba(30, 136, 255, 0.6);
+    }
+
+    .slider-value {
+      font-size: 13px;
+      font-weight: 600;
+      min-width: 32px;
+      text-align: right;
+    }
+
+    /* COLOR PICKER */
+    input[type="color"] {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      border: none;
+      background: #111827;
+      padding: 4px;
+      cursor: pointer;
+      margin-bottom: 12px;
+    }
+
+    /* PREVIEW CARD */
+    .preview-card {
+      background: radial-gradient(circle at top left, #1b2436 0, #0c111a 55%, #05070b 100%);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      box-shadow: var(--shadow-soft);
+      margin-top: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .preview-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at top right, rgba(79, 211, 255, 0.18), transparent 55%);
+      opacity: 0.9;
+      pointer-events: none;
+    }
+
+    #previewCanvas {
+      width: 100%;
+      height: 100px;
+      border-radius: 10px;
+      background: #111827;
+      display: block;
+    }
+
+    .time-axis {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 6px;
+    }
+
+    .time-axis span {
+      font-size: 10px;
+      color: var(--text-sub);
+    }
+
+    /* SAVE BUTTON */
+    .save-btn {
+      width: 100%;
+      padding: 12px;
+      margin-top: 20px;
+      border: none;
+      border-radius: var(--radius-md);
+      background: linear-gradient(135deg, #1e88ff, #0f4c81);
+      color: white;
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      box-shadow: 0 10px 22px rgba(0, 0, 0, 0.7);
+      cursor: pointer;
+    }
+
+    /* TOAST */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #0c111a;
+      border-radius: 20px;
+      padding: 10px 18px;
+      color: white;
+      opacity: 0;
+      transition: opacity 0.2s, transform 0.2s;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: var(--shadow-soft);
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .toast-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: #00c853;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+
+    <script>
+      // Load channel names from settings
+      const channelNames = JSON.parse(localStorage.getItem("channelNames") || "{}");
+
+      // Colours come from schedule JSON, but we store overrides here
+      const channelColors = {};
+    </script>
+
+    <!-- HEADER -->
+    <header class="header">
+      <div class="header-left">
+        <a href="index.html" class="ha-icon">⌂</a>
+        <div class="header-title">
+          <h1>LIGHTING</h1>
+          <span>channel control</span>
+        </div>
+      </div>
+      <a href="settings.html" class="header-gear">⚙</a>
+    </header>
+	
+	    <!-- CHANNELS SECTION -->
+    <div class="section-label">Channels</div>
+    <div id="channels"></div>
+
+    <!-- PREVIEW GRAPH -->
+    <div class="section-label">Daily Schedule Preview</div>
+
+    <div class="preview-card">
+      <canvas id="previewCanvas" width="800" height="100"></canvas>
+
+      <div class="time-axis">
+        <span>12 AM</span>
+        <span>6 AM</span>
+        <span>12 PM</span>
+        <span>6 PM</span>
+        <span>12 AM</span>
+      </div>
+    </div>
+
+    <!-- SAVE BUTTON -->
+    <button class="save-btn" onclick="saveSchedule()">
+      Save Schedule
+    </button>
+
+    <!-- TOAST -->
+    <div class="toast" id="toast">
+      <div class="toast-dot"></div>
+      Schedule saved
+    </div>
+
+    <script>
+      let schedule = {};
+      const defaultColors = ['#3b82f6', '#34d399', '#f59e0b', '#e879f9'];
+
+      function getColor(entityId) {
+        return channelColors[entityId] || '#3b82f6';
+      }
+
+      function applyColor(entityId, color) {
+        channelColors[entityId] = color;
+
+        // Update dot
+        const dot = document.getElementById(`${entityId}-dot`);
+        if (dot) {
+          dot.style.background = color;
+          dot.style.boxShadow = `0 0 10px ${color}`;
+        }
+
+        // Update slider value colour
+        const valLabel = document.getElementById(`${entityId}-max-value`);
+        if (valLabel) valLabel.style.color = color;
+
+        drawPreview();
+      }
+
+      async function loadSchedule() {
+        const res = await fetch('/api/lighting/schedule');
+        schedule = await res.json();
+        renderChannels();
+        drawPreview();
+      }
+
+      function renderChannels() {
+        const container = document.getElementById('channels');
+        container.innerHTML = '';
+
+        let ci = 0;
+        for (const [entityId, cfg] of Object.entries(schedule.channels)) {
+
+          // Load name from settings or fallback to cfg.label
+          const displayName = channelNames[entityId] || cfg.label;
+
+          // Load colour from schedule or fallback
+          if (!channelColors[entityId]) {
+            channelColors[entityId] = cfg.graph_color || defaultColors[ci % defaultColors.length];
+          }
+          const color = channelColors[entityId];
+          ci++;
+
+          // Create card
+          const card = document.createElement('div');
+          card.className = 'channel-card';
+
+          card.innerHTML = `
+            <div class="channel-header" onclick="toggleChannel('${entityId}')">
+              <div class="channel-left">
+                <div class="channel-dot" id="${entityId}-dot"
+                     style="background:${color}; box-shadow:0 0 10px ${color}"></div>
+                <span class="channel-name">${displayName}</span>
+              </div>
+              <span id="${entityId}-chevron" class="chevron">›</span>
+            </div>
+
+            <div class="channel-content" id="${entityId}-content">
+
+              <div class="field-label">Start Time</div>
+              <input type="time" id="${entityId}-start" value="${cfg.start_time}">
+
+              <div class="field-label">End Time</div>
+              <input type="time" id="${entityId}-end" value="${cfg.end_time}">
+
+              <div class="field-label">Dim Period (hours)</div>
+              <input type="number" id="${entityId}-dim" min="0" max="12" step="0.5"
+                     value="${cfg.dim_period_hours}">
+
+              <div class="field-label">Max Brightness</div>
+              <div class="slider-row">
+                <input type="range" id="${entityId}-max" min="0" max="255"
+                       value="${cfg.max_brightness}">
+                <span class="slider-value" id="${entityId}-max-value"
+                      style="color:${color}">${cfg.max_brightness}</span>
+              </div>
+
+              <div class="field-label">Channel Colour</div>
+              <input type="color" id="${entityId}-color" value="${color}">
+            </div>
+          `;
+
+          container.appendChild(card);
+
+          // Event listeners
+          document.getElementById(`${entityId}-color`).addEventListener('input', (e) => {
+            applyColor(entityId, e.target.value);
+          });
+
+          document.getElementById(`${entityId}-max`).addEventListener('input', (e) => {
+            document.getElementById(`${entityId}-max-value`).innerText = e.target.value;
+            drawPreview();
+          });
+
+          document.getElementById(`${entityId}-start`).addEventListener('input', drawPreview);
+          document.getElementById(`${entityId}-end`).addEventListener('input', drawPreview);
+          document.getElementById(`${entityId}-dim`).addEventListener('input', drawPreview);
+        }
+      }
+
+      function toggleChannel(entityId) {
+        const content = document.getElementById(`${entityId}-content`);
+        const chevron = document.getElementById(`${entityId}-chevron`);
+
+        const isOpen = content.style.display === 'block';
+
+        if (isOpen) {
+          content.style.display = 'none';
+          chevron.classList.remove('open');
+        } else {
+          content.style.display = 'block';
+          chevron.classList.add('open');
+        }
+      }
+    </script>
+	
+	    <script>
+      function computeBrightnessForChannelFrontend(minuteOfDay, config) {
+        const toMinutes = (t) => {
+          const [h, m] = t.split(':').map(Number);
+          return h * 60 + m;
+        };
+
+        const start = toMinutes(config.start_time);
+        const end = toMinutes(config.end_time);
+        const dim = config.dim_period_hours * 60;
+        const max = config.max_brightness;
+
+        if (minuteOfDay < start) return 0;
+
+        if (minuteOfDay < start + dim) {
+          return Math.round(((minuteOfDay - start) / dim) * max);
+        }
+
+        if (minuteOfDay > end - dim && minuteOfDay < end) {
+          return Math.round(((end - minuteOfDay) / dim) * max);
+        }
+
+        if (minuteOfDay >= end) return 0;
+
+        return max;
+      }
+
+      function drawPreview() {
+        const canvas = document.getElementById('previewCanvas');
+        const ctx = canvas.getContext('2d');
+        const W = canvas.width;
+        const H = canvas.height;
+
+        ctx.clearRect(0, 0, W, H);
+
+        // Background
+        ctx.fillStyle = '#111827';
+        ctx.fillRect(0, 0, W, H);
+
+        // Vertical grid lines
+        ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+        ctx.lineWidth = 1;
+        for (let i = 1; i < 4; i++) {
+          const x = (i / 4) * W;
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, H);
+          ctx.stroke();
+        }
+
+        if (!schedule.channels) return;
+
+        for (const [entityId, cfg] of Object.entries(schedule.channels)) {
+          const startEl = document.getElementById(`${entityId}-start`);
+
+          const liveCfg = {
+            start_time: startEl ? startEl.value : cfg.start_time,
+            end_time: startEl ? document.getElementById(`${entityId}-end`).value : cfg.end_time,
+            dim_period_hours: startEl ? Number(document.getElementById(`${entityId}-dim`).value) : cfg.dim_period_hours,
+            max_brightness: startEl ? Number(document.getElementById(`${entityId}-max`).value) : cfg.max_brightness,
+          };
+
+          const color = getColor(entityId);
+          const points = [];
+
+          for (let m = 0; m < 1440; m += 5) {
+            points.push(computeBrightnessForChannelFrontend(m, liveCfg));
+          }
+
+          // Fill gradient
+          const grad = ctx.createLinearGradient(0, 0, 0, H);
+          grad.addColorStop(0, color + '40');
+          grad.addColorStop(1, color + '00');
+          ctx.fillStyle = grad;
+
+          ctx.beginPath();
+          points.forEach((b, i) => {
+            const x = (i / points.length) * W;
+            const y = H - (b / 255) * (H - 4);
+            if (i === 0) {
+              ctx.moveTo(x, H);
+              ctx.lineTo(x, y);
+            } else {
+              ctx.lineTo(x, y);
+            }
+          });
+          ctx.lineTo(W, H);
+          ctx.closePath();
+          ctx.fill();
+
+          // Line
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          points.forEach((b, i) => {
+            const x = (i / points.length) * W;
+            const y = H - (b / 255) * (H - 4);
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          });
+          ctx.stroke();
+        }
+      }
+
+      async function saveSchedule() {
+        for (const [entityId, cfg] of Object.entries(schedule.channels)) {
+          cfg.start_time = document.getElementById(`${entityId}-start`).value;
+          cfg.end_time = document.getElementById(`${entityId}-end`).value;
+          cfg.dim_period_hours = Number(document.getElementById(`${entityId}-dim`).value);
+          cfg.max_brightness = Number(document.getElementById(`${entityId}-max`).value);
+          cfg.graph_color = channelColors[entityId] || cfg.graph_color;
+        }
+
+        await fetch('/api/lighting/schedule', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(schedule)
+        });
+
+        const toast = document.getElementById('toast');
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 2500);
+      }
+
+      loadSchedule();
+    </script>
+
+  </div>
+</body>
+</html>
