@@ -32,3 +32,5 @@
 4. Leave **Port** as `8123` unless changed in HA.
 5. Paste your token.
 6. Optionally tap **Test**, then tap **Save & Connect**.
+
+**IMPORTANT:** user-guide.html is not necessary to run the server and it is not linked from any other page. It is a full user-guide for configuration and use, including setting up helpers in HA.
