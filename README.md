@@ -28,7 +28,7 @@
 
 1. Open the app and tap ⚙ to open Settings.
 2. Expand the **Connection** card.
-3. Enter your HA **Host / IP Address** (e.g. `192.168.1.123`). No `http://`.
+3. Enter your HA **Host / IP Address** (e.g. `192.168.1.100`). No `http://`.
 4. Leave **Port** as `8123` unless changed in HA.
 5. Paste your token.
 6. Optionally tap **Test**, then tap **Save & Connect**.
