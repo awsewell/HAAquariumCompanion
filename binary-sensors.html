@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Binary Sensors</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root{--bg:#05070b;--card-bg:#0c111a;--accent:#1e88ff;--accent-soft:#0f4c81;--accent-cyan:#00c9d8;--accent-yellow:#ffb300;--accent-muted:#3f4b5f;--text-main:#ffffff;--text-sub:#a9b4c8;--radius-lg:18px;--radius-md:14px;--shadow-soft:0 14px 30px rgba(0,0,0,0.6);}
+    *{box-sizing:border-box;margin:0;padding:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Roboto",sans-serif;}
+    body{background:radial-gradient(circle at top,#101624 0,#05070b 55%,#020308 100%);color:var(--text-main);min-height:100vh;display:flex;justify-content:center;}
+    a{text-decoration:none;color:inherit;}
+    .app{width:100%;max-width:420px;padding:16px 16px 32px;}
+
+    .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
+    .header-left{display:flex;align-items:center;gap:10px;}
+    .ha-icon{width:32px;height:32px;border-radius:10px;background:radial-gradient(circle at 30% 0,#4fd3ff 0,#1e88ff 40%,#0b2a4a 100%);display:flex;align-items:center;justify-content:center;box-shadow:0 0 18px rgba(79,211,255,0.7);font-size:18px;color:#fff;}
+    .header-title{display:flex;flex-direction:column;}
+    .header-title h1{font-size:18px;letter-spacing:0.12em;text-transform:uppercase;}
+    .header-title span{font-size:11px;color:var(--text-sub);text-transform:uppercase;letter-spacing:0.18em;}
+    .header-gear{width:32px;height:32px;border-radius:999px;background:linear-gradient(135deg,#182233,#0b101a);display:flex;align-items:center;justify-content:center;box-shadow:0 0 10px rgba(0,0,0,0.7);color:var(--text-sub);font-size:18px;}
+
+    .section-label{font-size:11px;text-transform:uppercase;letter-spacing:0.18em;color:var(--text-sub);margin-bottom:10px;margin-top:20px;}
+
+    /* ── SENSOR CARD ── */
+    .sensor-card{background:radial-gradient(circle at top left,#1b2436 0,#0c111a 55%,#05070b 100%);border-radius:var(--radius-lg);padding:16px;box-shadow:var(--shadow-soft);margin-bottom:14px;position:relative;overflow:hidden;transition:box-shadow 0.3s;}
+    .sensor-card::before{content:"";position:absolute;inset:0;pointer-events:none;transition:background 0.4s;}
+    .sensor-card.state-active::before{background:radial-gradient(circle at top right,rgba(0,200,83,0.10),transparent 55%);}
+    .sensor-card.state-alert::before{background:radial-gradient(circle at top right,rgba(239,83,80,0.18),transparent 55%);}
+    .sensor-card.state-inactive::before{background:radial-gradient(circle at top right,rgba(63,75,95,0.10),transparent 55%);}
+    .sensor-card.state-unknown::before{background:radial-gradient(circle at top right,rgba(63,75,95,0.18),transparent 55%);}
+
+    .card-main{display:flex;align-items:center;justify-content:space-between;position:relative;z-index:1;}
+    .card-left{display:flex;align-items:center;gap:12px;}
+
+    .sensor-icon{width:44px;height:44px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:22px;transition:all 0.3s;flex-shrink:0;}
+    .sensor-icon.type-level { background:linear-gradient(135deg,#1e88ff,#0f4c81);box-shadow:0 0 14px rgba(30,136,255,0.4); }
+    .sensor-icon.type-leak  { background:linear-gradient(135deg,#ef5350,#b71c1c);box-shadow:0 0 14px rgba(239,83,80,0.4); }
+    .sensor-icon.type-other { background:linear-gradient(135deg,#7c4dff,#5c35cc);box-shadow:0 0 14px rgba(124,77,255,0.4); }
+    .sensor-icon.is-alert   { background:linear-gradient(135deg,#ef5350,#b71c1c) !important;box-shadow:0 0 20px rgba(239,83,80,0.8) !important; }
+
+    .sensor-meta{}
+    .sensor-name{font-size:15px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;}
+    .meta-row{display:flex;align-items:center;gap:6px;margin-top:4px;flex-wrap:wrap;}
+    .sensor-type-pill{display:inline-block;font-size:10px;padding:2px 8px;border-radius:999px;text-transform:uppercase;letter-spacing:0.1em;}
+    .type-pill-level { background:rgba(30,136,255,0.15);color:var(--accent); }
+    .type-pill-leak  { background:rgba(239,83,80,0.15);color:#ef5350; }
+    .type-pill-other { background:rgba(124,77,255,0.15);color:#9c6fff; }
+    .invert-pill{display:inline-block;font-size:10px;padding:2px 7px;border-radius:999px;text-transform:uppercase;letter-spacing:0.1em;background:rgba(255,179,0,0.12);color:var(--accent-yellow);}
+
+    .state-block{text-align:right;flex-shrink:0;}
+    .state-big{font-size:15px;font-weight:700;line-height:1;padding:5px 10px;border-radius:8px;}
+    .state-big.is-on      { background:rgba(0,200,83,0.12);color:#00c853; }
+    .state-big.is-off     { background:rgba(63,75,95,0.2);color:var(--text-sub); }
+    .state-big.is-alert   { background:rgba(239,83,80,0.15);color:#ef5350; }
+    .state-big.is-unknown { background:rgba(63,75,95,0.12);color:var(--accent-muted); }
+    .state-raw{font-size:10px;color:var(--text-sub);text-transform:uppercase;letter-spacing:0.1em;margin-top:4px;text-align:right;}
+
+    /* ── STATUS BAR ── */
+    .status-bar-wrap{margin-top:14px;position:relative;z-index:1;}
+    .status-bar{height:4px;border-radius:2px;background:#1a2333;overflow:hidden;}
+    .status-bar-fill{height:100%;border-radius:2px;transition:width 0.5s ease,background 0.3s;}
+
+    /* ── ENTITY ROW ── */
+    .entity-row{margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:space-between;position:relative;z-index:1;}
+    .entity-id{font-size:10px;color:var(--text-sub);font-family:monospace;word-break:break-all;}
+
+    /* ── ALERT BANNER ── */
+    .alert-banner{background:linear-gradient(135deg,rgba(239,83,80,0.15),rgba(183,28,28,0.1));border:1px solid rgba(239,83,80,0.3);border-radius:12px;padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px;animation:pulseAlert 2s infinite;}
+    @keyframes pulseAlert{0%,100%{box-shadow:0 0 0 0 rgba(239,83,80,0.2);}50%{box-shadow:0 0 0 8px rgba(239,83,80,0.0);}}
+    .alert-icon{font-size:20px;flex-shrink:0;}
+    .alert-text{font-size:13px;font-weight:600;}
+    .alert-sub{font-size:11px;color:var(--text-sub);margin-top:2px;}
+
+    /* ── SUMMARY ── */
+    .summary-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:4px;}
+    .summary-box{background:radial-gradient(circle at top left,#1b2436 0,#0c111a 100%);border-radius:var(--radius-md);padding:12px;text-align:center;box-shadow:var(--shadow-soft);}
+    .summary-val{font-size:22px;font-weight:700;}
+    .summary-lbl{font-size:10px;color:var(--text-sub);text-transform:uppercase;letter-spacing:0.1em;margin-top:4px;}
+
+    .empty-msg{font-size:13px;color:var(--text-sub);text-align:center;padding:30px 0;}
+    .footer{margin-top:18px;font-size:11px;color:var(--text-sub);display:flex;justify-content:space-between;opacity:0.8;}
+    .footer-left{display:flex;align-items:center;}
+    .status-dot{width:8px;height:8px;border-radius:999px;margin-right:6px;transition:background 0.4s,box-shadow 0.4s;}
+    .status-dot.connected{background:#00c853;box-shadow:0 0 8px rgba(0,200,83,0.9);}
+    .status-dot.disconnected{background:#ef5350;box-shadow:0 0 8px rgba(239,83,80,0.6);}
+  </style>
+</head>
+<body>
+<div class="app">
+  <header class="header">
+    <div class="header-left">
+      <a href="index.html" class="ha-icon">⌂</a>
+      <div class="header-title"><h1>BINARY SENSORS</h1><span>state monitoring</span></div>
+    </div>
+    <a href="settings.html" class="header-gear">⚙</a>
+  </header>
+
+  <!-- Alert banner (shown only when alerts are active) -->
+  <div id="alert-banner" style="display:none;" class="alert-banner">
+    <span class="alert-icon">🚨</span>
+    <div><div class="alert-text" id="alert-text">Alert</div><div class="alert-sub" id="alert-sub"></div></div>
+  </div>
+
+  <div class="section-label">Status Summary</div>
+  <div class="summary-row">
+    <div class="summary-box"><div class="summary-val" style="color:#00c853" id="sum-active">—</div><div class="summary-lbl">Active</div></div>
+    <div class="summary-box"><div class="summary-val" style="color:var(--accent-yellow)" id="sum-alert">—</div><div class="summary-lbl">Alert</div></div>
+    <div class="summary-box"><div class="summary-val" style="color:var(--accent-muted)" id="sum-inactive">—</div><div class="summary-lbl">Inactive</div></div>
+  </div>
+
+  <div class="section-label">Sensors</div>
+  <div id="sensor-container"><div class="empty-msg">Loading sensors…</div></div>
+
+  <footer class="footer">
+    <div class="footer-left">
+      <span class="status-dot disconnected" id="conn-dot"></span>
+      <span id="conn-label">Connecting…</span>
+    </div>
+    <span>Last sync: <span id="last-sync">—</span></span>
+  </footer>
+</div>
+
+<script>
+  let SENSORS = [];
+
+  // ── TYPE DEFINITIONS ──────────────────────────────────────────────────────
+  const TYPE_DEFS = {
+    level: { icon:"💧", label:"Level Sensor",  iconCls:"type-level", alertOnActive: false },
+    leak:  { icon:"💦", label:"Leak Detector", iconCls:"type-leak",  alertOnActive: true  },
+    other: { icon:"📡", label:"Other",         iconCls:"type-other", alertOnActive: false },
+  };
+
+  // State is already invert-adjusted by the server
+  function isOn(state) {
+    if (state === null || state === undefined || state === "unknown") return null;
+    const s = String(state).toLowerCase();
+    return s === "on" || s === "true" || s === "1" || s === "open" || s === "detected" || s === "wet" || s === "active";
+  }
+
+  function getCardInfo(sensor) {
+    const def    = TYPE_DEFS[sensor.type] || TYPE_DEFS.other;
+    const on     = isOn(sensor.state);
+    const isAlert = def.alertOnActive && on === true;
+
+    let cardCls, stateCls, stateText;
+    if (on === null) {
+      cardCls = "state-unknown"; stateCls = "is-unknown"; stateText = "UNKNOWN";
+    } else if (isAlert) {
+      cardCls = "state-alert";  stateCls = "is-alert";   stateText = "ALERT";
+    } else if (on) {
+      cardCls = "state-active"; stateCls = "is-on";      stateText = "ON";
+    } else {
+      cardCls = "state-inactive"; stateCls = "is-off";   stateText = "OFF";
+    }
+
+    return { def, on, isAlert, cardCls, stateCls, stateText };
+  }
+
+  // ── RENDER ────────────────────────────────────────────────────────────────
+  function render() {
+    const container = document.getElementById("sensor-container");
+    container.innerHTML = "";
+
+    if (!SENSORS.length) {
+      container.innerHTML = `<div class="empty-msg">No binary sensors configured.<br><a href="settings.html" style="color:var(--accent)">Go to Settings →</a></div>`;
+      updateSummary();
+      return;
+    }
+
+    SENSORS.forEach(s => {
+      const { def, on, isAlert, cardCls, stateCls, stateText } = getCardInfo(s);
+
+      const card = document.createElement("div");
+      card.className = `sensor-card ${cardCls}`;
+      card.id = `bs-card-${s.id}`;
+
+      // Show raw state if inverted so user can see both
+      const rawLabel = s.invert && s.rawState !== "unknown"
+        ? `<span style="font-size:10px;color:var(--text-sub);">Raw: ${s.rawState?.toUpperCase()}</span>`
+        : "";
+
+      card.innerHTML = `
+        <div class="card-main">
+          <div class="card-left">
+            <div class="sensor-icon ${def.iconCls}${isAlert?" is-alert":""}" id="bs-icon-${s.id}">${def.icon}</div>
+            <div class="sensor-meta">
+              <div class="sensor-name">${s.name}</div>
+              <div class="meta-row">
+                <span class="sensor-type-pill type-pill-${s.type}">${def.label}</span>
+                ${s.invert ? `<span class="invert-pill">Inverted</span>` : ""}
+              </div>
+            </div>
+          </div>
+          <div class="state-block">
+            <div class="state-big ${stateCls}" id="bs-state-${s.id}">${stateText}</div>
+            ${s.invert ? `<div class="state-raw" id="bs-raw-${s.id}">Raw: ${(s.rawState||"—").toUpperCase()}</div>` : ""}
+          </div>
+        </div>
+        <div class="status-bar-wrap">
+          <div class="status-bar">
+            <div class="status-bar-fill" id="bs-bar-${s.id}"
+                 style="width:${on===null?15:on?100:5}%;background:${isAlert?"#ef5350":on===null?"#3f4b5f":on?"#00c853":"#2a3448"}"></div>
+          </div>
+        </div>
+        <div class="entity-row">
+          <span class="entity-id">${s.entity || "—"}</span>
+        </div>
+      `;
+      container.appendChild(card);
+    });
+
+    updateSummary();
+    updateAlertBanner();
+  }
+
+  function updateCards(newData) {
+    // If count changed, full re-render
+    if (newData.length !== SENSORS.length) { SENSORS = newData; render(); return; }
+
+    newData.forEach(s => {
+      const { def, on, isAlert, cardCls, stateCls, stateText } = getCardInfo(s);
+      const card = document.getElementById(`bs-card-${s.id}`);
+      if (!card) return;
+
+      card.className = `sensor-card ${cardCls}`;
+
+      const icon = document.getElementById(`bs-icon-${s.id}`);
+      if (icon) icon.className = `sensor-icon ${def.iconCls}${isAlert?" is-alert":""}`;
+
+      const stateEl = document.getElementById(`bs-state-${s.id}`);
+      if (stateEl) { stateEl.textContent = stateText; stateEl.className = `state-big ${stateCls}`; }
+
+      const rawEl = document.getElementById(`bs-raw-${s.id}`);
+      if (rawEl) rawEl.textContent = `Raw: ${(s.rawState||"—").toUpperCase()}`;
+
+      const bar = document.getElementById(`bs-bar-${s.id}`);
+      if (bar) {
+        bar.style.width      = `${on===null?15:on?100:5}%`;
+        bar.style.background = isAlert?"#ef5350":on===null?"#3f4b5f":on?"#00c853":"#2a3448";
+      }
+    });
+
+    SENSORS = newData;
+    updateSummary();
+    updateAlertBanner();
+  }
+
+  function updateSummary() {
+    let active=0, alert=0, inactive=0;
+    SENSORS.forEach(s => {
+      const { on, isAlert } = getCardInfo(s);
+      if (isAlert)       alert++;
+      else if (on)       active++;
+      else               inactive++;
+    });
+    document.getElementById("sum-active").textContent  = active;
+    document.getElementById("sum-alert").textContent   = alert;
+    document.getElementById("sum-inactive").textContent = inactive;
+  }
+
+  function updateAlertBanner() {
+    const alerts = SENSORS.filter(s => getCardInfo(s).isAlert);
+    const banner = document.getElementById("alert-banner");
+    if (alerts.length) {
+      banner.style.display = "flex";
+      document.getElementById("alert-text").textContent = alerts.length === 1
+        ? `Alert: ${alerts[0].name}`
+        : `${alerts.length} sensors alerting`;
+      document.getElementById("alert-sub").textContent = alerts.map(s => s.name).join(" · ");
+    } else {
+      banner.style.display = "none";
+    }
+  }
+
+  // ── POLL ──────────────────────────────────────────────────────────────────
+  async function load() {
+    try {
+      const [cfg, data] = await Promise.all([
+        fetch("/api/config").then(r => r.json()),
+        fetch("/api/binary-sensors").then(r => r.json()),
+      ]);
+
+      const dot   = document.getElementById("conn-dot");
+      const label = document.getElementById("conn-label");
+      if (cfg.connected) {
+        dot.className     = "status-dot connected";
+        label.textContent = "Connected to Home Assistant";
+      } else {
+        dot.className     = "status-dot disconnected";
+        label.textContent = cfg.host ? "Disconnected — retrying…" : "Not configured";
+      }
+
+      const firstLoad = SENSORS.length === 0;
+      if (firstLoad) { SENSORS = data; render(); } else { updateCards(data); }
+
+      const now = new Date();
+      document.getElementById("last-sync").textContent =
+        `${now.getHours()}:${String(now.getMinutes()).padStart(2,"0")}`;
+    } catch {
+      document.getElementById("conn-dot").className     = "status-dot disconnected";
+      document.getElementById("conn-label").textContent = "Server offline";
+    }
+  }
+
+  load();
+  setInterval(load, 10000);
+</script>
+</body>
+</html>

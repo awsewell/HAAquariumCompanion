@@ -67,7 +67,7 @@ function connectHA(cfg) {
       haState[entity_id] = new_state;
       recordHistory(entity_id, new_state?.state);
     } else if (msg.type === "result" && pending[msg.id]) {
-      pending[msg.id](msg.result); delete pending[msg.id];
+      pending[msg.id](msg.result, msg.success, msg.error); delete pending[msg.id];
     }
   });
 
@@ -78,6 +78,29 @@ function connectHA(cfg) {
 function callService(domain, service, data) {
   if (!haWs || haWs.readyState !== WebSocket.OPEN) { console.warn("HA not connected"); return; }
   haWs.send(JSON.stringify({ id:msgId++, type:"call_service", domain, service, service_data:data }));
+}
+// Send a WebSocket message and return a Promise that resolves with the result.
+// Rejects if HA returns success:false, or after timeoutMs with no response.
+function callWs(msg, timeoutMs = 10000) {
+  return new Promise((resolve, reject) => {
+    if (!haWs || haWs.readyState !== WebSocket.OPEN) {
+      return reject(new Error('HA WebSocket not connected'));
+    }
+    const id = msgId++;
+    const timer = setTimeout(() => {
+      delete pending[id];
+      reject(new Error('WebSocket timeout waiting for id ' + id));
+    }, timeoutMs);
+    pending[id] = (result, success, error) => {
+      clearTimeout(timer);
+      if (success === false) {
+        reject(new Error((error && error.message) || JSON.stringify(error) || 'HA returned error'));
+      } else {
+        resolve(result);
+      }
+    };
+    haWs.send(JSON.stringify(Object.assign({}, msg, { id })));
+  });
 }
 
 // ─── SENSOR HISTORY ───────────────────────────────────────────────────────────
@@ -159,61 +182,6 @@ setInterval(() => {
   });
 }, 30 * 1000);
 
-// ─── LIGHTING SCHEDULE (Corrected + Sanitized + Sydney Time) ──────────────────
-
-// GET: merged lighting schedule with names + colors from settings.json
-app.get("/api/lighting/schedule", (req, res) => {
-  const s = loadSettings();
-  const lighting = s?.lighting?.channels || {};
-  const sched    = s?.lightingSchedule?.channels || {};
-
-  const result = { channels: {} };
-
-  Object.values(lighting).forEach(ch => {
-    if (!ch?.entity) return;
-    const eid = ch.entity;
-    const existing = sched[eid] || {};
-
-    // Build merged + sanitized schedule entry
-    result.channels[eid] = {
-      start_time:       existing.start_time       || "08:00",
-      end_time:         existing.end_time         || "22:00",
-      dim_period_hours: parseFloat(existing.dim_period_hours) || 3,
-      max_brightness:   parseInt(existing.max_brightness)     || 255,
-      graph_color:      existing.graph_color      || ch.color,
-
-      // UI fields
-      label:            ch.name  || "Unnamed",
-      color:            ch.color || "#ffffff"
-    };
-  });
-
-  res.json(result);
-});
-
-
-// POST: sanitize + save schedule into settings.json
-app.post("/api/lighting/schedule", (req, res) => {
-  const incoming = req.body?.channels || {};
-  const s = loadSettings();
-
-  if (!s.lightingSchedule) s.lightingSchedule = {};
-  s.lightingSchedule.channels = {};
-
-  Object.entries(incoming).forEach(([eid, cfg]) => {
-    s.lightingSchedule.channels[eid] = {
-      start_time:       cfg.start_time,
-      end_time:         cfg.end_time,
-      dim_period_hours: parseFloat(cfg.dim_period_hours) || 0,
-      max_brightness:   parseInt(cfg.max_brightness)     || 0,
-      graph_color:      cfg.graph_color || "#ffffff"
-    };
-  });
-
-  saveSettings(s);
-  res.json({ ok: true });
-});
-
 
 // ─── LIGHTING LOOP (Sydney Time + Debug Logging + Sanitized) ──────────────────
 setInterval(() => {
@@ -221,8 +189,9 @@ setInterval(() => {
   const schedule = s?.lightingSchedule?.channels || {};
 
   // Convert server time → Australia/Sydney local time
-  const nowSydney = new Date(
-    new Date().toLocaleString("en-AU", { timeZone: "Australia/Sydney" })
+  const nowSydney = new Date();
+  const sydneyTime = new Date(
+    nowSydney.toLocaleString("en-US", { timeZone: "Australia/Sydney" })
   );
   const minuteOfDay = nowSydney.getHours() * 60 + nowSydney.getMinutes();
 
@@ -302,40 +271,56 @@ app.get("/api/ha/entities", (req, res) => {
 // ─── API: SETTINGS ────────────────────────────────────────────────────────────
 app.get("/api/settings",      (req, res) => res.json(loadSettings()));
 app.post("/api/settings/save", (req, res) => {
-  const incoming = req.body;
-  const current  = loadSettings();
+  try {
+    const incoming = req.body || {};
+    const current  = loadSettings();
 
-  // Merge top-level keys (lighting, switches, pumps, sensors, etc.)
-	const merged = {
-	  ...current,
-	  ...incoming,
-	  switches: {
-		...current.switches,
-		...incoming.switches
-	  },
-	  lighting: {
-		...current.lighting,
-		...incoming.lighting
-	  },
-	  lightingSchedule: {
-		...current.lightingSchedule,
-		...incoming.lightingSchedule
-	  },
-	  pumps: {
-		...current.pumps,
-		...incoming.pumps
-	  },
-	  sensors: {
-		...current.sensors,
-		...incoming.sensors
-	  }
-	};
+    // Helper — safe spread that tolerates undefined/null values
+    const s = (a, b) => ({ ...(a || {}), ...(b || {}) });
 
-  saveSettings(merged);
-  res.json({ ok: true });
+    const merged = {
+      ...current,
+      ...incoming,
+      switches:        s(current.switches,        incoming.switches),
+      lighting:        s(current.lighting,        incoming.lighting),
+      lightingSchedule:s(current.lightingSchedule,incoming.lightingSchedule),
+      pumps:           s(current.pumps,           incoming.pumps),
+      sensors:         s(current.sensors,         incoming.sensors),
+      levelSensors:    s(current.levelSensors,    incoming.levelSensors),
+    };
+
+    saveSettings(merged);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("Settings save error:", err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
 });
 
-// ─── API: SENSORS ─────────────────────────────────────────────────────────────
+// ─── API: SWITCH AUTOMATION SAVE ─────────────────────────────────────────────
+app.post("/api/switches/automation/save", async (req, res) => {
+  try {
+    const { id, name, entity, config } = req.body;
+    if (!id || !name || !entity) {
+      return res.status(400).json({ ok:false, error:"Missing id/name/entity" });
+    }
+
+    // Save automation config into settings.json
+    const s = loadSettings();
+    if (!s.switchAutomation) s.switchAutomation = {};
+    s.switchAutomation[id] = config;
+    saveSettings(s);
+
+    // Push to Home Assistant
+    await pushAutomationsToHA(name, entity, config);
+
+    res.json({ ok:true });
+  } catch (err) {
+    console.error("Automation save error:", err);
+    res.status(500).json({ ok:false, error:err.message });
+  }
+});
+
 // ─── API: SENSORS ─────────────────────────────────────────────────────────────
 app.get("/api/sensors", (req, res) => {
   const s = loadSettings();
@@ -345,12 +330,16 @@ app.get("/api/sensors", (req, res) => {
   // Built-in sensor groups
   const groups = ["temperature","ph","orp","kh"];
   groups.forEach(group => {
-    const cfg = sensors[group] || {};
-    const eid = cfg.primary || null;
+    const cfg  = sensors[group] || {};
+    const eid  = cfg.primary   || null;
+    const eid2 = cfg.secondary || null;
     result[group] = {
-      value:  eid ? (haState[eid]?.state ?? null) : null,
-      entity: eid,
-      active: cfg.active !== false,
+      value:          eid  ? (haState[eid]?.state  ?? null) : null,
+      secondaryValue: eid2 ? (haState[eid2]?.state ?? null) : null,
+      entity:         eid,
+      secondaryEntity: eid2,
+      active:         cfg.active !== false,
+      decimals:       cfg.decimals ?? null,
     };
   });
 
@@ -370,6 +359,7 @@ app.get("/api/sensors", (req, res) => {
     customUnit:   cfg.customUnit   || "",
     showOnHome:   !!cfg.showOnHome,
     showOnSensors: cfg.showOnSensors !== false,
+    decimals:     cfg.decimals ?? null,
     value:        cfg.entity ? (haState[cfg.entity]?.state ?? null) : null,
   }));
 
@@ -400,6 +390,351 @@ function haGet(path) {
     req.setTimeout(8000, () => { req.destroy(); reject(new Error("HA history request timed out")); });
     req.end();
   });
+}
+
+
+// ─── HA REST API HELPERS (POST / DELETE) ──────────────────────────────────────
+function haRest(method, path, body) {
+  return new Promise((resolve, reject) => {
+    const cfg = loadConfig();
+    if (!cfg.host || !cfg.token) return reject(new Error("HA not configured"));
+    const payload = body ? JSON.stringify(body) : null;
+    const options = {
+      hostname: cfg.host,
+      port:     cfg.port || 8123,
+      path,
+      method,
+      headers: {
+        "Authorization":  `Bearer ${cfg.token}`,
+        "Content-Type":   "application/json",
+        ...(payload ? { "Content-Length": Buffer.byteLength(payload) } : {}),
+      },
+    };
+    const req = http.request(options, (res) => {
+      let data = "";
+      res.on("data", chunk => data += chunk);
+      res.on("end", () => {
+        // Some HA endpoints return empty body on success
+        if (!data.trim()) return resolve({ ok: true, status: res.statusCode });
+        try { resolve({ ok: res.statusCode < 300, status: res.statusCode, ...JSON.parse(data) }); }
+        catch { resolve({ ok: res.statusCode < 300, status: res.statusCode, raw: data }); }
+      });
+    });
+    req.on("error", reject);
+    req.setTimeout(10000, () => { req.destroy(); reject(new Error("HA REST request timed out")); });
+    if (payload) req.write(payload);
+    req.end();
+  });
+}
+
+// ─── HA HELPER & AUTOMATION UTILITIES ─────────────────────────────────────────
+
+// Convert a friendly name to a slug: "Return Pump" → "return_pump"
+function nameToSlug(name) {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
+}
+
+// Derive all helper entity IDs for a switch from its name
+function switchHelperIds(name) {
+  const s = nameToSlug(name);
+  return {
+    mode:           `input_text.aquarium_${s}_mode`,
+    scheduleOn:     `input_text.aquarium_${s}_schedule_on`,
+    scheduleOff:    `input_text.aquarium_${s}_schedule_off`,
+    sensorEntity:   `input_text.aquarium_${s}_sensor_entity`,
+    triggerType:    `input_text.aquarium_${s}_trigger_type`,
+    onThreshold:    `input_number.aquarium_${s}_on_threshold`,
+    offThreshold:   `input_number.aquarium_${s}_off_threshold`,
+    levelEntity1:   `input_text.aquarium_${s}_level_entity1`,
+    levelEntity2:   `input_text.aquarium_${s}_level_entity2`,
+  };
+}
+
+// Check whether the mode helper exists in HA (fast existence check)
+async function switchHelpersExist(name) {
+  try {
+    const h = switchHelperIds(name);
+    const result = await haRest("GET", `/api/states/${h.mode}`);
+    return result.status !== 404;
+  } catch { return false; }
+}
+
+// Create all 9 helpers for a switch in HA via WebSocket (Storage Collection API).
+// input_text and input_number are storage-based helpers — the correct API is
+// WebSocket commands "input_text/create" and "input_number/create", NOT REST.
+// HA auto-generates the entity ID on create, so we immediately rename it to the
+// slug we want using config/entity_registry/update.
+async function createSwitchHelpers(name) {
+  const slug   = nameToSlug(name);
+  const label  = name;
+  const errors = [];
+  const created = [];
+
+  // input_text helpers
+  const textHelpers = [
+    { id: `aquarium_${slug}_mode`,          name: `Aquarium ${label} Mode`,           initial: "manual", min: 0, max: 255 },
+    { id: `aquarium_${slug}_schedule_on`,   name: `Aquarium ${label} Schedule On`,    initial: "08:00",  min: 0, max: 10  },
+    { id: `aquarium_${slug}_schedule_off`,  name: `Aquarium ${label} Schedule Off`,   initial: "22:00",  min: 0, max: 10  },
+    { id: `aquarium_${slug}_sensor_entity`, name: `Aquarium ${label} Sensor Entity`,  initial: "",       min: 0, max: 255 },
+    { id: `aquarium_${slug}_trigger_type`,  name: `Aquarium ${label} Trigger Type`,   initial: "low",    min: 0, max: 10  },
+    { id: `aquarium_${slug}_level_entity1`, name: `Aquarium ${label} Level Entity 1`, initial: "",       min: 0, max: 255 },
+    { id: `aquarium_${slug}_level_entity2`, name: `Aquarium ${label} Level Entity 2`, initial: "",       min: 0, max: 255 },
+  ];
+
+  for (const h of textHelpers) {
+    const targetEntityId = `input_text.${h.id}`;
+    try {
+      // Create the helper — HA returns the new item object with its auto-assigned id
+      const result = await callWs({ type: "input_text/create", name: h.name, initial: h.initial, min: h.min, max: h.max });
+      const autoEntityId = `input_text.${result.id}`;
+      // Rename to the deterministic slug-based entity ID we need
+      if (autoEntityId !== targetEntityId) {
+        await callWs({ type: "config/entity_registry/update", entity_id: autoEntityId, new_entity_id: targetEntityId });
+      }
+      created.push(targetEntityId);
+    } catch(e) {
+      console.error(`Helper creation error (${targetEntityId}): ${e.message}`);
+      errors.push(`${targetEntityId}: ${e.message}`);
+    }
+  }
+
+  // input_number helpers
+  const numberHelpers = [
+    { id: `aquarium_${slug}_on_threshold`,  name: `Aquarium ${label} On Threshold`,  initial: 25, min: -9999, max: 9999, step: 0.1 },
+    { id: `aquarium_${slug}_off_threshold`, name: `Aquarium ${label} Off Threshold`, initial: 26, min: -9999, max: 9999, step: 0.1 },
+  ];
+
+  for (const h of numberHelpers) {
+    const targetEntityId = `input_number.${h.id}`;
+    try {
+      const result = await callWs({ type: "input_number/create", name: h.name, initial: h.initial, min: h.min, max: h.max, step: h.step, mode: "box" });
+      const autoEntityId = `input_number.${result.id}`;
+      if (autoEntityId !== targetEntityId) {
+        await callWs({ type: "config/entity_registry/update", entity_id: autoEntityId, new_entity_id: targetEntityId });
+      }
+      created.push(targetEntityId);
+    } catch(e) {
+      console.error(`Helper creation error (${targetEntityId}): ${e.message}`);
+      errors.push(`${targetEntityId}: ${e.message}`);
+    }
+  }
+
+  console.log(`🔧 Helpers created for "${name}": ${created.length} OK, ${errors.length} errors`);
+  if (errors.length) console.warn("  Errors:", errors);
+
+  return { ok: true, created, errors };
+}
+
+// Write current swState values into the HA helpers via service calls
+async function syncHelpersFromState(name, switchEntity, automationCfg) {
+  const h   = switchHelperIds(name);
+  const cfg = automationCfg || {};
+  const mode = cfg.mode || "manual";
+  const sc   = cfg.schedule    || {};
+  const sen  = cfg.sensor      || {};
+  const lev  = cfg.levelSensor || {};
+
+  // Compute on/off thresholds from setpoint + variance
+  const sp    = parseFloat(sen.setpoint) || 0;
+  const half  = (parseFloat(sen.variance) || 0) / 2;
+  const isLow = (sen.triggerType || "low") === "low";
+  const onTh  = isLow ? sp - half : sp + half;
+  const offTh = isLow ? sp + half : sp - half;
+
+  const textUpdates = [
+    { entity_id: h.mode,         value: mode },
+    { entity_id: h.scheduleOn,   value: sc.onAt   || "08:00" },
+    { entity_id: h.scheduleOff,  value: sc.offAt  || "22:00" },
+    { entity_id: h.sensorEntity, value: sen.entity || "" },
+    { entity_id: h.triggerType,  value: sen.triggerType || "low" },
+    { entity_id: h.levelEntity1, value: lev.entity1 || "" },
+    { entity_id: h.levelEntity2, value: lev.entity2 || "" },
+  ];
+
+  const numUpdates = [
+    { entity_id: h.onThreshold,  value: onTh },
+    { entity_id: h.offThreshold, value: offTh },
+  ];
+
+  for (const u of textUpdates) {
+    try { await haRest("POST", "/api/services/input_text/set_value", u); } catch {}
+  }
+  for (const u of numUpdates) {
+    try { await haRest("POST", "/api/services/input_number/set_value", u); } catch {}
+  }
+}
+
+// ─── API: SWITCH HELPER STATUS ───────────────────────────────────────────────
+app.get("/api/switches/helpers/status", async (req, res) => {
+  const name = req.query.name;
+  if (!name) return res.status(400).json({ ok:false, error:"name required" });
+
+  try {
+    const exists = await switchHelpersExist(name);
+    res.json({ ok:true, exists });
+  } catch (err) {
+    res.status(500).json({ ok:false, error:err.message });
+  }
+});
+
+// Build the ON automation object for a switch
+function buildOnAutomation(slug, label, switchEntity, automationCfg) {
+  const h   = switchHelperIds(label);
+  const cfg = automationCfg || {};
+  const sen = cfg.sensor      || {};
+  const lev = cfg.levelSensor || {};
+  const sensorEid  = sen.entity  || "sensor.unknown";
+  const level1Eid  = lev.entity1 || "binary_sensor.unknown";
+
+  return {
+    id:    `aquarium_${slug}_on`,
+    alias: `Aquarium ${label} — ON`,
+    description: `Auto-generated by Aquarium Controller. Controls ${switchEntity} based on mode stored in ${h.mode}.`,
+    mode: "single",
+    trigger: [
+      // Fires every minute — schedule + sensor + level mode all rely on this
+      { platform: "time_pattern", minutes: "/1" },
+      // Binary sensor state changes for level mode (faster response)
+      { platform: "state", entity_id: level1Eid, to: "on", id: "level1_on" },
+    ],
+    condition: [
+      {
+        condition: "or",
+        conditions: [
+          // ── SCHEDULE MODE ──────────────────────────────────────────────────
+          {
+            condition: "and",
+            conditions: [
+              { condition: "template", value_template: `{{ states('${h.mode}') == 'schedule' }}` },
+              { condition: "template", value_template: `{{ now().strftime('%H:%M') == states('${h.scheduleOn}') }}` },
+              { condition: "template", value_template: `{{ is_state('${switchEntity}', 'off') }}` },
+            ],
+          },
+          // ── SENSOR MODE ────────────────────────────────────────────────────
+          {
+            condition: "and",
+            conditions: [
+              { condition: "template", value_template: `{{ states('${h.mode}') == 'sensor' }}` },
+              { condition: "template", value_template: `{{ states('${h.triggerType}') == 'low' and states(states('${h.sensorEntity}')) | float(0) <= states('${h.onThreshold}') | float(0) }}` },
+              { condition: "template", value_template: `{{ is_state('${switchEntity}', 'off') }}` },
+            ],
+          },
+          {
+            condition: "and",
+            conditions: [
+              { condition: "template", value_template: `{{ states('${h.mode}') == 'sensor' }}` },
+              { condition: "template", value_template: `{{ states('${h.triggerType}') == 'high' and states(states('${h.sensorEntity}')) | float(0) >= states('${h.onThreshold}') | float(0) }}` },
+              { condition: "template", value_template: `{{ is_state('${switchEntity}', 'off') }}` },
+            ],
+          },
+          // ── LEVEL MODE (single) ────────────────────────────────────────────
+          {
+            condition: "and",
+            conditions: [
+              { condition: "template", value_template: `{{ states('${h.mode}') == 'level' }}` },
+              { condition: "template", value_template: `{{ states('${h.levelEntity1}') == 'on' and (states('${h.levelEntity2}') in ['', 'unknown', 'unavailable'] or states('${h.levelEntity2}') == 'on') }}` },
+              { condition: "template", value_template: `{{ is_state('${switchEntity}', 'off') }}` },
+            ],
+          },
+        ],
+      },
+    ],
+    action: [
+      { service: "switch.turn_on", target: { entity_id: switchEntity } },
+    ],
+  };
+}
+
+// Build the OFF automation object for a switch
+function buildOffAutomation(slug, label, switchEntity, automationCfg) {
+  const h   = switchHelperIds(label);
+  const cfg = automationCfg || {};
+  const lev = cfg.levelSensor || {};
+
+  return {
+    id:    `aquarium_${slug}_off`,
+    alias: `Aquarium ${label} — OFF`,
+    description: `Auto-generated by Aquarium Controller. Controls ${switchEntity} based on mode stored in ${h.mode}.`,
+    mode: "single",
+    trigger: [
+      { platform: "time_pattern", minutes: "/1" },
+      // Binary sensor state changes for level mode
+      { platform: "state", entity_id: lev.entity1 || "binary_sensor.unknown", to: "off", id: "level1_off" },
+    ],
+    condition: [
+      {
+        condition: "or",
+        conditions: [
+          // ── SCHEDULE MODE ──────────────────────────────────────────────────
+          {
+            condition: "and",
+            conditions: [
+              { condition: "template", value_template: `{{ states('${h.mode}') == 'schedule' }}` },
+              { condition: "template", value_template: `{{ now().strftime('%H:%M') == states('${h.scheduleOff}') }}` },
+              { condition: "template", value_template: `{{ is_state('${switchEntity}', 'on') }}` },
+            ],
+          },
+          // ── SENSOR MODE ────────────────────────────────────────────────────
+          {
+            condition: "and",
+            conditions: [
+              { condition: "template", value_template: `{{ states('${h.mode}') == 'sensor' }}` },
+              { condition: "template", value_template: `{{ states('${h.triggerType}') == 'low' and states(states('${h.sensorEntity}')) | float(0) >= states('${h.offThreshold}') | float(0) }}` },
+              { condition: "template", value_template: `{{ is_state('${switchEntity}', 'on') }}` },
+            ],
+          },
+          {
+            condition: "and",
+            conditions: [
+              { condition: "template", value_template: `{{ states('${h.mode}') == 'sensor' }}` },
+              { condition: "template", value_template: `{{ states('${h.triggerType}') == 'high' and states(states('${h.sensorEntity}')) | float(0) <= states('${h.offThreshold}') | float(0) }}` },
+              { condition: "template", value_template: `{{ is_state('${switchEntity}', 'on') }}` },
+            ],
+          },
+          // ── LEVEL MODE (dual — both sensors on = full = turn off) ──────────
+          {
+            condition: "and",
+            conditions: [
+              { condition: "template", value_template: `{{ states('${h.mode}') == 'level' }}` },
+              { condition: "template", value_template: `{{ states('${h.levelEntity1}') == 'off' and states('${h.levelEntity2}') == 'off' }}` },
+              { condition: "template", value_template: `{{ is_state('${switchEntity}', 'on') }}` },
+            ],
+          },
+          // ── LEVEL MODE (single — sensor off = turn off) ────────────────────
+          {
+            condition: "and",
+            conditions: [
+              { condition: "template", value_template: `{{ states('${h.mode}') == 'level' }}` },
+              { condition: "template", value_template: `{{ states('${h.levelEntity2}') in ['', 'unknown', 'unavailable'] and states('${h.levelEntity1}') == 'off' }}` },
+              { condition: "template", value_template: `{{ is_state('${switchEntity}', 'on') }}` },
+            ],
+          },
+        ],
+      },
+    ],
+    action: [
+      { service: "switch.turn_off", target: { entity_id: switchEntity } },
+    ],
+  };
+}
+
+// Push both automations to HA and reload
+async function pushAutomationsToHA(name, switchEntity, automationCfg) {
+  const slug  = nameToSlug(name);
+  const onAuto  = buildOnAutomation(slug, name, switchEntity, automationCfg);
+  const offAuto = buildOffAutomation(slug, name, switchEntity, automationCfg);
+
+  const results = {};
+  try {
+    results.on  = await haRest("POST", `/api/config/automation/config/${onAuto.id}`,  onAuto);
+    results.off = await haRest("POST", `/api/config/automation/config/${offAuto.id}`, offAuto);
+    // Reload automations so changes take effect immediately
+    await haRest("POST", "/api/services/automation/reload", {});
+    results.reloaded = true;
+  } catch(e) {
+    results.error = e.message;
+  }
+  return results;
 }
 
 app.get("/api/sensors/history", async (req, res) => {
@@ -457,13 +792,20 @@ function downsample(points, maxPoints) {
 // ─── API: SWITCHES ────────────────────────────────────────────────────────────
 app.get("/api/switches", (req, res) => {
   const s = loadSettings();
-  const switches = s?.switches || {};
+  const switches    = s?.switches || {};
+  const automations = s?.switchAutomation || {};
   const result = Object.entries(switches).map(([key, cfg], i) => ({
-    id: i + 1, key, name: cfg.name || key, entity: cfg.entity,
-    state: haState[cfg.entity]?.state ?? "unknown",
-    power: haState[cfg.entity]?.attributes?.current_power_w ?? null,
-    watts: cfg.watts || 0,
-    icon:  cfg.icon  || "⏻",
+    id:         i + 1,
+    key,
+    name:       cfg.name   || key,
+    entity:     cfg.entity,
+    state:      haState[cfg.entity]?.state ?? "unknown",
+    power:      haState[cfg.entity]?.attributes?.current_power_w ?? null,
+    watts:      cfg.watts  || 0,
+    icon:       cfg.icon   || "⏻",
+    automation: automations[i + 1] || null,
+    // Slug so the UI can check/build helper entity IDs without server round-trip
+    slug:       nameToSlug(cfg.name || key),
   }));
   res.json(result);
 });
@@ -485,6 +827,66 @@ app.post("/api/switches/config", (req, res) => {
   saveSettings(s);
   res.json({ ok:true });
 });
+// ─── API: SWITCH HA HELPERS — CHECK ──────────────────────────────────────────
+// Returns whether the HA helpers exist for a given switch name
+app.get("/api/switches/helpers/status", async (req, res) => {
+  const { name } = req.query;
+  if (!name) return res.status(400).json({ error: "name required" });
+  if (!haConnected) return res.json({ exists: false, reason: "HA not connected" });
+  try {
+    const exists = await switchHelpersExist(name);
+    res.json({ exists });
+  } catch(e) {
+    res.json({ exists: false, reason: e.message });
+  }
+});
+
+// ─── API: SWITCH HA HELPERS — CREATE ─────────────────────────────────────────
+// Creates all 9 HA helpers for a switch. Safe to call multiple times — HA
+// returns an error for duplicate IDs which we swallow gracefully.
+app.post("/api/switches/helpers/create", async (req, res) => {
+  const { name } = req.body;
+  if (!name) return res.status(400).json({ error: "name required" });
+  if (!haConnected) return res.status(503).json({ error: "HA not connected" });
+  try {
+    const result = await createSwitchHelpers(name);
+    res.json(result);
+  } catch(e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// ─── API: SWITCH HA AUTOMATION — PUSH ────────────────────────────────────────
+// Writes helper values from swState then pushes both ON/OFF automations to HA.
+// Called from the Save Automation button on the Switches page.
+app.post("/api/switches/ha-automation", async (req, res) => {
+  const { id } = req.body;
+  if (!id) return res.status(400).json({ error: "id required" });
+  if (!haConnected) return res.status(503).json({ error: "HA not connected" });
+
+  const s      = loadSettings();
+  const sw     = Object.values(s?.switches || {})[parseInt(id) - 1];
+  const autoCfg = s?.switchAutomation?.[id] || {};
+
+  if (!sw?.name)   return res.status(400).json({ error: "Switch not found" });
+  if (!sw?.entity) return res.status(400).json({ error: "Switch has no entity configured" });
+
+  try {
+    // 1. Sync helper values to HA
+    await syncHelpersFromState(sw.name, sw.entity, autoCfg);
+
+    // 2. Push both automations to HA
+    const result = await pushAutomationsToHA(sw.name, sw.entity, autoCfg);
+
+    console.log(`🤖 HA automations pushed for switch ${id} (${sw.name}):`, result);
+    res.json({ ok: !result.error, ...result });
+  } catch(e) {
+    console.error("ha-automation push error:", e);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+
 
 // ─── API: DOSING ──────────────────────────────────────────────────────────────
 
@@ -844,6 +1246,143 @@ app.post("/api/lighting/schedule", (req, res) => {
 
   saveSettings(s);
   res.json({ ok: true });
+});
+
+// ─── HELPER: collect all binary sensor entity configs from both sources ────────
+// Source 1: settings.levelSensors (the dedicated binary sensors settings section)
+// Source 2: settings.switchAutomation[*].levelSensor (configured per-switch)
+function getAllBinarySensorConfigs(s) {
+  const normalizeType = t => ({ high:"level", low:"level", leak:"leak" }[t] || t || "level");
+  const configs = [];
+  const seen = new Set();
+
+  // Source 1: global levelSensors list
+  const ls = s?.levelSensors || {};
+  Object.entries(ls).forEach(([key, cfg]) => {
+    if (!cfg.entity || seen.has(cfg.entity)) return;
+    seen.add(cfg.entity);
+    configs.push({
+      key,
+      name:   cfg.name   || key,
+      entity: cfg.entity,
+      type:   normalizeType(cfg.type),
+      invert: !!cfg.invert,
+    });
+  });
+
+  // Source 2: levelSensor sub-object inside each switchAutomation entry
+  const automations = s?.switchAutomation || {};
+  const switches    = s?.switches || {};
+  Object.entries(automations).forEach(([id, cfg]) => {
+    const levelSensor = cfg?.levelSensor;
+    if (!levelSensor) return;
+    const swCfg = Object.values(switches)[parseInt(id) - 1];
+    const swName = swCfg?.name || `Switch ${id}`;
+    const mode   = levelSensor.mode || "single";
+    const entities = mode === "single"
+      ? [levelSensor.entity1]
+      : [levelSensor.entity1, levelSensor.entity2];
+    entities.filter(Boolean).forEach((entity, i) => {
+      if (seen.has(entity)) return;
+      seen.add(entity);
+      configs.push({
+        key:    `sw${id}_${i + 1}`,
+        name:   mode === "single" ? swName : `${swName} ${i === 0 ? "(High)" : "(Low)"}`,
+        entity,
+        type:   "level",
+        invert: false,
+      });
+    });
+  });
+
+  return configs;
+}
+
+// ─── API: BINARY SENSORS ─────────────────────────────────────────────────────
+app.get("/api/binary-sensors", (req, res) => {
+  try {
+    const s = loadSettings();
+    const configs = getAllBinarySensorConfigs(s);
+
+    const result = configs.map((cfg, i) => {
+      const rawState = cfg.entity ? (haState[cfg.entity]?.state ?? "unknown") : "unknown";
+      const invert   = !!cfg.invert;
+      let state = rawState;
+      if (invert && rawState === "on")  state = "off";
+      if (invert && rawState === "off") state = "on";
+      return {
+        id: i + 1,
+        key:    cfg.key,
+        name:   cfg.name,
+        entity: cfg.entity,
+        type:   cfg.type,
+        invert,
+        rawState,
+        state,
+      };
+    });
+    res.json(result);
+  } catch(err) {
+    console.error("binary-sensors route error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Keep old endpoint as alias so switches.html poll doesn't break
+app.get("/api/level-sensors", (req, res) => res.redirect("/api/binary-sensors"));
+
+// ─── API: ALL SENSORS (for switch sensor-mode dropdown) ───────────────────────
+// Returns built-in numeric sensors + custom numeric sensors + binary sensors
+app.get("/api/sensors/all", (req, res) => {
+  const s = loadSettings();
+  const sensors = s?.sensors || {};
+  const result = [];
+
+  // Built-in numeric sensors
+  const builtins = [
+    { key:"temperature", label:"Temperature", unit:"°C" },
+    { key:"ph",          label:"pH",          unit:""   },
+    { key:"orp",         label:"ORP",         unit:"mV" },
+    { key:"kh",          label:"KH",          unit:"dKH" },
+  ];
+  builtins.forEach(def => {
+    const cfg = sensors[def.key] || {};
+    if (cfg.active === false || !cfg.primary) return;
+    result.push({
+      value: cfg.primary,
+      label: def.label,
+      unit:  def.unit,
+      type:  "numeric",
+    });
+  });
+
+  // Custom numeric sensors
+  const custom = sensors?.custom || {};
+  Object.values(custom).forEach(cfg => {
+    if (!cfg.entity) return;
+    const unit = cfg.unit === "custom" ? cfg.customUnit : (cfg.unit === "none" ? "" : cfg.unit);
+    result.push({
+      value: cfg.entity,
+      label: cfg.name || cfg.entity,
+      unit,
+      type: "numeric",
+    });
+  });
+
+  // Binary sensors — from both levelSensors and switchAutomation
+  getAllBinarySensorConfigs(s).forEach(cfg => {
+    const typeLabel = { level:"Level Sensor", leak:"Leak Detector", other:"Binary Sensor" }[cfg.type] || cfg.type;
+    result.push({
+      value:     cfg.entity,
+      label:     `${cfg.name} (${typeLabel})`,
+      unit:      "",
+      type:      "level",
+      levelType: cfg.type,
+      invert:    cfg.invert,
+    });
+  });
+
+  res.json(result);
 });
 
 // ─── START ────────────────────────────────────────────────────────────────────

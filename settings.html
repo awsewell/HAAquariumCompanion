@@ -89,6 +89,15 @@
     .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
     .toast-dot { width: 6px; height: 6px; border-radius: 999px; background: #00c853; }
     .toast.error .toast-dot { background: #ef5350; }
+    .ha-helper-row{display:flex;align-items:center;justify-content:space-between;margin-top:12px;padding:10px 12px;background:rgba(0,0,0,0.2);border-radius:10px;}
+    .ha-helper-status{font-size:11px;display:flex;align-items:center;gap:6px;}
+    .ha-helper-dot{width:7px;height:7px;border-radius:999px;flex-shrink:0;}
+    .ha-helper-dot.exists{background:#00c853;box-shadow:0 0 6px rgba(0,200,83,0.8);}
+    .ha-helper-dot.missing{background:#ef5350;box-shadow:0 0 6px rgba(239,83,80,0.6);}
+    .ha-helper-dot.unknown{background:#3f4b5f;}
+    .ha-helper-dot.checking{background:#ffb300;box-shadow:0 0 6px rgba(255,179,0,0.6);}
+    .create-helpers-btn{padding:6px 12px;border:none;border-radius:8px;background:linear-gradient(135deg,#0c2540,#0c3058);color:var(--accent-cyan);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;cursor:pointer;white-space:nowrap;}
+    .create-helpers-btn:disabled{opacity:0.5;cursor:default;}
   </style>
 </head>
 <body>
@@ -203,6 +212,20 @@
     </div>
   </div>
 
+  <!-- BINARY SENSORS -->
+  <div class="section-label">Binary Sensors</div>
+  <div class="settings-card">
+    <div class="settings-header" onclick="toggleSection('levelSensors')">
+      <span class="settings-title">Binary Sensors</span>
+      <span id="levelSensors-chevron" class="chevron">›</span>
+    </div>
+    <div class="settings-content" id="levelSensors-content">
+      <div id="level-sensor-list"></div>
+      <button class="add-btn" onclick="addLevelSensor()">+ Add Binary Sensor</button>
+      <button class="save-btn" onclick="saveLevelSensors()">Save Binary Sensors</button>
+    </div>
+  </div>
+
   <div class="toast" id="toast"><div class="toast-dot"></div><span id="toast-text">Saved</span></div>
 </div>
 
@@ -218,6 +241,7 @@
   let circPumps        = []; // [{ id, name, entity }]
   let switches         = []; // [{ id, name, entity, watts, icon }]
   let customSensors    = []; // [{ id, name, entity, unit, customUnit, showOnHome, showOnSensors }]
+  let levelSensors     = []; // [{ id, name, entity, type }]
 
   /* ─── COLLAPSIBLE ───────────────────────── */
   function toggleSection(key) {
@@ -342,7 +366,7 @@
 
   /* ─── RENDER ALL SECTIONS ───────────────── */
   function renderAllSections() {
-    renderLighting(); renderDosing(); renderPumps(); renderSwitches(); renderSensors();
+    renderLighting(); renderDosing(); renderPumps(); renderSwitches(); renderSensors(); renderLevelSensors();
   }
 
   /* ─── LIGHTING ──────────────────────────── */
@@ -513,9 +537,83 @@
         <input type="number" id="sw-watts-${i}" value="${sw.watts || 0}" min="0">
         <div class="field-label">Icon</div>
         <input type="text" id="sw-icon-${i}" value="${sw.icon || "⏻"}" style="max-width:80px;">
+        <div class="ha-helper-row">
+          <div class="ha-helper-status">
+            <div class="ha-helper-dot unknown" id="sw-helper-dot-${i}"></div>
+            <span id="sw-helper-lbl-${i}" style="color:var(--text-sub)">HA helpers: checking…</span>
+          </div>
+          <button class="create-helpers-btn" id="sw-helper-btn-${i}"
+            onclick="createHelpers(${i})" ${!haConnected ? "disabled" : ""}>
+            🔧 Create HA Helpers
+          </button>
+        </div>
+        <div style="font-size:11px;color:var(--text-sub);margin-top:6px;line-height:1.5;">
+          Helpers store automation config in HA so it runs independently of this server.
+          Automation rules are pushed from the <a href="switches.html" style="color:var(--accent)">Switches page →</a>
+        </div>
       `;
       container.appendChild(div);
+      // Check helper status for existing named switches
+      if (sw.name) checkHelperStatus(i, sw.name);
     });
+  }
+
+  // Check whether HA helpers exist for a switch and update the status indicator
+  async function checkHelperStatus(i, name) {
+    const dot = document.getElementById(`sw-helper-dot-${i}`);
+    const lbl = document.getElementById(`sw-helper-lbl-${i}`);
+    const btn = document.getElementById(`sw-helper-btn-${i}`);
+    if (!dot || !lbl) return;
+    dot.className = "ha-helper-dot checking";
+    lbl.textContent = "HA helpers: checking…";
+    try {
+      const r = await fetch(`/api/switches/helpers/status?name=${encodeURIComponent(name)}`).then(r => r.json());
+      if (r.exists) {
+        dot.className   = "ha-helper-dot exists";
+        lbl.textContent = "HA helpers: ✓ exist";
+        if (btn) btn.textContent = "🔄 Re-create Helpers";
+      } else {
+        dot.className   = "ha-helper-dot missing";
+        lbl.textContent = `HA helpers: not found${r.reason ? " ("+r.reason+")" : ""}`;
+      }
+    } catch {
+      dot.className   = "ha-helper-dot unknown";
+      lbl.textContent = "HA helpers: could not check";
+    }
+  }
+
+  // Create HA helpers for a switch
+  async function createHelpers(i) {
+    const name = document.getElementById(`sw-name-${i}`)?.value?.trim();
+    if (!name) { showToast("Enter a switch name first", true); return; }
+    const btn = document.getElementById(`sw-helper-btn-${i}`);
+    const dot = document.getElementById(`sw-helper-dot-${i}`);
+    const lbl = document.getElementById(`sw-helper-lbl-${i}`);
+    if (btn) { btn.disabled = true; btn.textContent = "Creating…"; }
+    if (dot) dot.className = "ha-helper-dot checking";
+    try {
+      const r = await fetch("/api/switches/helpers/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      }).then(r => r.json());
+      if (r.ok || (r.created && r.created.length > 0)) {
+        dot.className   = "ha-helper-dot exists";
+        lbl.textContent = `HA helpers: ✓ created (${(r.created||[]).length} helpers)`;
+        btn.textContent = "🔄 Re-create Helpers";
+        showToast(`Helpers created for "${name}" ✓`);
+      } else {
+        dot.className   = "ha-helper-dot missing";
+        lbl.textContent = "HA helpers: creation failed";
+        showToast(r.error || "Helper creation failed", true);
+      }
+    } catch(e) {
+      dot.className   = "ha-helper-dot missing";
+      lbl.textContent = "HA helpers: error";
+      showToast("Error: " + e.message, true);
+    } finally {
+      if (btn) btn.disabled = false;
+    }
   }
 
   function addSwitch() {
@@ -528,16 +626,34 @@
 
   async function saveSwitches() {
     const sw = {};
+    // Track which names are new (no helpers yet) so we can create them after save
+    const needHelpers = [];
+
     switches.forEach((s, i) => {
+      const name   = document.getElementById(`sw-name-${i}`)?.value   || "";
+      const entity = document.getElementById(`sw-entity-${i}`)?.value || "";
       sw[`switch_${i + 1}`] = {
-        name:   document.getElementById(`sw-name-${i}`)?.value   || "",
-        entity: document.getElementById(`sw-entity-${i}`)?.value || "",
-        watts:  parseFloat(document.getElementById(`sw-watts-${i}`)?.value) || 0,
-        icon:   document.getElementById(`sw-icon-${i}`)?.value   || "⏻",
+        name,
+        entity,
+        watts: parseFloat(document.getElementById(`sw-watts-${i}`)?.value) || 0,
+        icon:  document.getElementById(`sw-icon-${i}`)?.value   || "⏻",
       };
+      // Flag new switches (previously had no name) for helper creation
+      if (name && !s.name && haConnected) needHelpers.push({ i, name });
+      // Also update the in-memory switch name so status check uses correct name
+      s.name = name;
     });
+
     settings.switches = sw;
     await saveAll("Switches saved");
+
+    // Auto-create helpers for newly named switches
+    for (const { i, name } of needHelpers) {
+      await createHelpers(i);
+    }
+
+    // Refresh helper status for all switches
+    switches.forEach((sw, i) => { if (sw.name) checkHelperStatus(i, sw.name); });
   }
 
   /* ─── SENSORS ───────────────────────────── */
@@ -567,6 +683,8 @@
     groups.forEach(({ key, label, unit }, gi) => {
       const saved  = Array.isArray(sens[key]) ? sens[key] : [sens[key]?.primary || "", sens[key]?.secondary || ""];
       const active = sensorActive[key];
+      const savedDecimals = sens[key]?.decimals;
+      const decimalsVal = (savedDecimals === 0 || savedDecimals === 1 || savedDecimals === 2) ? savedDecimals : "";
       const div = document.createElement("div");
       if (gi > 0) div.innerHTML += `<div class="field-divider"></div>`;
       div.innerHTML += `
@@ -585,6 +703,13 @@
         ${buildEntitySelect(`${key}-1`, ["sensor"], saved[0])}
         <div class="field-label">Secondary / Backup Sensor</div>
         ${buildEntitySelect(`${key}-2`, ["sensor"], saved[1])}
+        <div class="field-label">Decimal Places</div>
+        <select id="${key}-decimals">
+          <option value="" ${decimalsVal===""?"selected":""}>Auto (as-is)</option>
+          <option value="0" ${decimalsVal===0?"selected":""}>0 — whole numbers</option>
+          <option value="1" ${decimalsVal===1?"selected":""}>1 — e.g. 25.4</option>
+          <option value="2" ${decimalsVal===2?"selected":""}>2 — e.g. 8.25</option>
+        </select>
       `;
       container.appendChild(div);
 
@@ -633,6 +758,13 @@
         <div id="cs-custom-unit-wrap-${i}" style="display:${s.unit==="custom"?"block":"none"};margin-top:6px;">
           <input type="text" id="cs-custom-unit-${i}" value="${s.customUnit||""}" placeholder="e.g. NTU">
         </div>
+        <div class="field-label">Decimal Places</div>
+        <select id="cs-decimals-${i}">
+          <option value="" ${(s.decimals===undefined||s.decimals===null||s.decimals==="")?"selected":""}>Auto (as-is)</option>
+          <option value="0" ${s.decimals===0?"selected":""}>0 — whole numbers</option>
+          <option value="1" ${s.decimals===1?"selected":""}>1 — e.g. 25.4</option>
+          <option value="2" ${s.decimals===2?"selected":""}>2 — e.g. 8.25</option>
+        </select>
         <div style="display:flex;gap:16px;margin-top:10px;">
           <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-sub);">
             <span>Show on Home</span>
@@ -711,16 +843,21 @@
 
     // Built-in sensors — read from sensorActive JS state + entity selects
     ["temperature","ph","orp","kh"].forEach(key => {
+      const decimalsRaw = document.getElementById(`${key}-decimals`)?.value;
+      const decimals = decimalsRaw === "" ? null : parseInt(decimalsRaw);
       settings.sensors[key] = {
         primary:   document.getElementById(`${key}-1`)?.value || "",
         secondary: document.getElementById(`${key}-2`)?.value || "",
         active:    sensorActive[key],
+        ...(decimals !== null ? { decimals } : {}),
       };
     });
 
     // Custom sensors — read entirely from customSensors JS state (synced via event listeners)
     const custom = {};
     customSensors.forEach((s, i) => {
+      const decimalsRaw = document.getElementById(`cs-decimals-${i}`)?.value;
+      const decimals = decimalsRaw === "" ? null : parseInt(decimalsRaw);
       custom[`custom_${i+1}`] = {
         name:          s.name,
         entity:        s.entity,
@@ -728,6 +865,7 @@
         customUnit:    s.customUnit,
         showOnHome:    s.showOnHome,
         showOnSensors: s.showOnSensors,
+        ...(decimals !== null ? { decimals } : {}),
       };
     });
     settings.sensors.custom = custom;
@@ -736,13 +874,118 @@
     await saveAll("Sensors saved");
   }
 
+  /* ─── LEVEL SENSORS ─────────────────────── */
+  const LEVEL_SENSOR_TYPES = [
+    { value:"level", label:"Level Sensor"  },
+    { value:"leak",  label:"Leak Detector" },
+    { value:"other", label:"Other"         },
+  ];
+
+  // Sync all current DOM values back into the levelSensors JS array.
+  // Must be called before any re-render so typed values are not lost.
+  function syncLevelSensorsFromDOM() {
+    levelSensors.forEach((s, i) => {
+      s.name   = document.getElementById(`ls-name-${i}`)?.value   ?? s.name;
+      s.entity = document.getElementById(`ls-entity-${i}`)?.value ?? s.entity;
+      s.type   = document.getElementById(`ls-type-${i}`)?.value   ?? s.type;
+      // invert is kept live via click listener, no DOM read needed
+    });
+  }
+
+  function renderLevelSensors() {
+    const container = document.getElementById("level-sensor-list");
+    if (!container) return;
+    container.innerHTML = "";
+    levelSensors.forEach((s, i) => {
+      const typeOpts = LEVEL_SENSOR_TYPES.map(t =>
+        `<option value="${t.value}" ${(s.type||"level")===t.value?"selected":""}>${t.label}</option>`
+      ).join("");
+      const inverted = !!s.invert;
+      const div = document.createElement("div");
+      if (i > 0) div.innerHTML += `<div class="field-divider"></div>`;
+      div.innerHTML += `
+        <div class="entry-header">
+          <span class="entry-title">Binary Sensor ${i + 1}</span>
+          <button class="remove-btn" onclick="syncLevelSensorsFromDOM();removeLevelSensor(${i})">✕ Remove</button>
+        </div>
+        <div class="field-label">Name</div>
+        <input type="text" id="ls-name-${i}" value="${s.name || ""}">
+        <div class="field-label">Sensor Entity</div>
+        ${buildEntitySelect(`ls-entity-${i}`, ["binary_sensor","sensor"], s.entity)}
+        <div class="field-label">Sensor Type</div>
+        <select id="ls-type-${i}">${typeOpts}</select>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;">
+          <span style="font-size:11px;color:var(--text-sub);text-transform:uppercase;letter-spacing:0.12em;">Invert</span>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:11px;color:var(--text-sub);" id="ls-invert-lbl-${i}">${inverted?"ON":"OFF"}</span>
+            <div style="position:relative;width:42px;height:24px;cursor:pointer;" id="ls-invert-toggle-${i}">
+              <div id="ls-invert-track-${i}" style="position:absolute;inset:0;border-radius:999px;background:${inverted?"var(--accent)":"#1a2333"};transition:background 0.22s;">
+                <div id="ls-invert-thumb-${i}" style="position:absolute;top:3px;left:${inverted?"21px":"3px"};width:18px;height:18px;border-radius:999px;background:#fff;transition:left 0.22s;box-shadow:0 1px 4px rgba(0,0,0,0.4);"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--text-sub);margin-top:6px;line-height:1.4;">When ON, flips the reported state (on→off, off→on).</div>
+      `;
+      container.appendChild(div);
+
+      // Keep JS array in sync as user types/selects
+      div.querySelector(`#ls-name-${i}`)
+        ?.addEventListener("input",  e => { levelSensors[i].name   = e.target.value; });
+      div.querySelector(`#ls-entity-${i}`)
+        ?.addEventListener("change", e => { levelSensors[i].entity = e.target.value; });
+      div.querySelector(`#ls-type-${i}`)
+        ?.addEventListener("change", e => { levelSensors[i].type   = e.target.value; });
+
+      // Invert toggle
+      div.querySelector(`#ls-invert-toggle-${i}`)?.addEventListener("click", () => {
+        levelSensors[i].invert = !levelSensors[i].invert;
+        const on = levelSensors[i].invert;
+        document.getElementById(`ls-invert-track-${i}`).style.background = on ? "var(--accent)" : "#1a2333";
+        document.getElementById(`ls-invert-thumb-${i}`).style.left       = on ? "21px" : "3px";
+        document.getElementById(`ls-invert-lbl-${i}`).textContent        = on ? "ON" : "OFF";
+      });
+    });
+  }
+
+  function addLevelSensor() {
+    syncLevelSensorsFromDOM(); // preserve any unsaved edits in existing rows
+    levelSensors.push({ id: Date.now(), name: "", entity: "", type: "level", invert: false });
+    renderLevelSensors();
+  }
+
+  function removeLevelSensor(i) {
+    // syncLevelSensorsFromDOM already called via onclick before this runs
+    levelSensors.splice(i, 1);
+    renderLevelSensors();
+  }
+
+  async function saveLevelSensors() {
+    syncLevelSensorsFromDOM(); // make sure latest DOM values are in the array
+    const ls = {};
+    levelSensors.forEach((s, i) => {
+      ls[`level_${i + 1}`] = {
+        name:   s.name   || "",
+        entity: s.entity || "",
+        type:   s.type   || "level",
+        invert: !!s.invert,
+      };
+    });
+    settings.levelSensors = ls;
+    await saveAll("Binary sensors saved");
+  }
+
   /* ─── SAVE TO BACKEND ───────────────────── */
   async function saveAll(msg = "Settings saved") {
     try {
       const r = await fetch("/api/settings/save", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(settings) });
-      if ((await r.json()).ok) showToast(msg);
-      else showToast("Save failed", true);
-    } catch { showToast("Save failed", true); }
+      const data = await r.json();
+      if (data.ok) showToast(msg);
+      else showToast(data.error ? `Save failed: ${data.error}` : "Save failed", true);
+    } catch (err) {
+      console.error("saveAll error:", err);
+      showToast("Save failed — check server console", true);
+    }
   }
 
   /* ─── TOAST ─────────────────────────────── */
@@ -790,6 +1033,11 @@
     customSensors = Object.values(cs).map((s, i) => ({
       id: i, name: s.name||"", entity: s.entity||"", unit: s.unit||"none",
       customUnit: s.customUnit||"", showOnHome: !!s.showOnHome, showOnSensors: s.showOnSensors!==false,
+    }));
+
+    const lsData = settings.levelSensors || {};
+    levelSensors = Object.values(lsData).map((s, i) => ({
+      id: i, name: s.name||"", entity: s.entity||"", type: s.type||"level", invert: !!s.invert,
     }));
 
     renderAllSections();

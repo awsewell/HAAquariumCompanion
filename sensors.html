@@ -131,6 +131,15 @@
   let sensorCfg = {};
   let customData = [];  // array from /api/sensors custom field
 
+  /* ── FORMAT HELPER ───────────────────────────────────────────────────────── */
+  function formatVal(val, decimals) {
+    if (val === null || val === undefined) return "—";
+    const num = parseFloat(val);
+    if (isNaN(num)) return String(val);
+    if (decimals === 0 || decimals === 1 || decimals === 2) return num.toFixed(decimals);
+    return String(val);
+  }
+
   /* ── SPARKLINE ───────────────────────────────────────────────────────────── */
   function drawSparkline(canvasId, data, color) {
     const canvas = document.getElementById(canvasId);
@@ -198,7 +207,8 @@
       const barPct    = val !== null ? statusBarPct(val, def.absRange[0], def.absRange[1]) : 0;
       const optMinPct = statusBarPct(def.optRange[0], def.absRange[0], def.absRange[1]);
       const optMaxPct = statusBarPct(def.optRange[1], def.absRange[0], def.absRange[1]);
-      const displayVal = val !== null ? `${val}${def.unit === "°C" ? "°" : ""}` : "—";
+      const decimals  = (sensorCfg[def.key] || {}).decimals ?? null;
+      const displayVal = val !== null ? `${formatVal(val, decimals)}${def.unit === "°C" ? "°" : ""}` : "—";
       const unitLabel  = def.unit === "°C" ? "Celsius" : (def.unit || "—");
 
       const card = document.createElement("div");
@@ -286,9 +296,8 @@
     // Custom sensors
     customData.forEach((s, i) => {
       if (!s.showOnSensors) return;
-      const val = s.value !== null ? parseFloat(s.value) : null;
       const displayUnit = s.unit === "custom" ? s.customUnit : (s.unit === "none" ? "" : s.unit);
-      const displayVal  = val !== null ? `${val}` : "—";
+      const displayVal  = s.value !== null ? formatVal(s.value, s.decimals ?? null) : "—";
 
       const card = document.createElement("div");
       card.innerHTML = `
@@ -344,8 +353,9 @@
       const cfg = sensorCfg[def.key] || {};
       if (cfg.active === false) return;
       const val = liveData[def.key] !== undefined ? parseFloat(liveData[def.key]) : null;
+      const decimals = (sensorCfg[def.key] || {}).decimals ?? null;
       const valEl = document.getElementById(`${def.key}-val`);
-      if (valEl) valEl.textContent = val !== null ? `${val}${def.unit === "°C" ? "°" : ""}` : "—";
+      if (valEl) valEl.textContent = val !== null ? `${formatVal(val, decimals)}${def.unit === "°C" ? "°" : ""}` : "—";
       const barEl = document.getElementById(`${def.key}-bar`);
       if (barEl && val !== null) barEl.style.width = statusBarPct(val, def.absRange[0], def.absRange[1]) + "%";
       const pillEl = document.getElementById(`${def.key}-pill`);
@@ -355,14 +365,15 @@
         pillEl.textContent = pill.label;
       }
       const v1El = document.getElementById(`${def.key}-v1`);
-      if (v1El) v1El.textContent = val !== null ? val : "—";
+      if (v1El) v1El.textContent = val !== null ? formatVal(val, decimals) : "—";
       const v2El = document.getElementById(`${def.key}-v2`);
-      if (v2El) v2El.textContent = liveData[`${def.key}_secondary`] ?? "—";
+      const val2Raw = liveData[`${def.key}_secondary`];
+      if (v2El) v2El.textContent = val2Raw !== undefined && val2Raw !== null ? formatVal(val2Raw, decimals) : "—";
     });
     // Custom sensor live values
     customData.forEach((s, i) => {
       const el = document.getElementById(`custom-val-${i}`);
-      if (el && s.value !== null) el.textContent = s.value;
+      if (el && s.value !== null) el.textContent = formatVal(s.value, s.decimals ?? null);
     });
   }
 
@@ -445,6 +456,10 @@
         const group = data[def.key];
         if (group && typeof group === "object" && "value" in group) {
           liveData[def.key] = group.value;
+          // Populate secondary value so dual-probe display works
+          if (group.secondaryValue !== undefined) {
+            liveData[`${def.key}_secondary`] = group.secondaryValue;
+          }
         } else if (data[def.key] !== undefined) {
           liveData[def.key] = data[def.key];
         }
@@ -482,6 +497,9 @@
         const group = data[def.key];
         if (group && typeof group === "object" && "value" in group) {
           liveData[def.key] = group.value;
+          if (group.secondaryValue !== undefined) {
+            liveData[`${def.key}_secondary`] = group.secondaryValue;
+          }
         }
       });
       if (Array.isArray(data.custom)) customData = data.custom;

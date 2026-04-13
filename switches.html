@@ -100,10 +100,41 @@
     .action-btn.all-on{background:linear-gradient(135deg,#00c853,#00961e);color:#fff;box-shadow:0 0 16px rgba(0,200,83,0.25);}
     .action-btn.all-off{background:linear-gradient(135deg,#1a2333,#0f1620);color:var(--text-sub);}
     .action-btn:hover{opacity:0.85;}
+    .switch-card.level-controlled::before{background:radial-gradient(circle at top right,rgba(0,201,216,0.12),transparent 55%);}
+    .mode-tab.active-level{background:linear-gradient(135deg,#0c2540,#0c3058);color:var(--accent-cyan);box-shadow:0 0 10px rgba(0,201,216,0.2);}
+    .level-panel-grid{display:flex;flex-direction:column;gap:12px;}
+    .level-type-row{display:flex;gap:6px;}
+    .level-type-btn{flex:1;padding:8px 4px;border:none;border-radius:10px;background:#111827;color:var(--text-sub);font-size:11px;text-transform:uppercase;letter-spacing:0.08em;cursor:pointer;transition:all 0.2s;text-align:center;display:flex;flex-direction:column;align-items:center;gap:3px;}
+    .level-type-btn .lico{font-size:16px;}
+    .level-type-btn.active-single{background:linear-gradient(135deg,#0c2540,#0c3058);color:var(--accent-cyan);box-shadow:0 0 8px rgba(0,201,216,0.2);}
+    .level-type-btn.active-dual{background:linear-gradient(135deg,#0c2a20,#0c3828);color:#69f07a;box-shadow:0 0 8px rgba(0,200,83,0.2);}
+    .level-desc-box{background:#0a0f1a;border-radius:10px;padding:10px 12px;font-size:12px;color:var(--text-sub);line-height:1.5;}
+    .level-desc-box strong{color:var(--accent-cyan);display:block;margin-bottom:4px;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;}
+    .level-live-row{display:flex;gap:8px;}
+    .level-sensor-badge{flex:1;background:#111827;border-radius:10px;padding:8px 10px;display:flex;align-items:center;gap:8px;}
+    .level-sensor-dot{width:8px;height:8px;border-radius:999px;flex-shrink:0;}
+    .level-sensor-dot.state-on{background:#00c853;box-shadow:0 0 6px rgba(0,200,83,0.8);}
+    .level-sensor-dot.state-off{background:#ef5350;box-shadow:0 0 6px rgba(239,83,80,0.6);}
+    .level-sensor-dot.state-unknown{background:#3f4b5f;}
+    .level-sensor-val{font-size:13px;font-weight:600;}
+    .level-sensor-lbl{font-size:10px;color:var(--text-sub);margin-top:1px;}
     .empty-msg{font-size:13px;color:var(--text-sub);text-align:center;padding:20px 0;}
     .footer{margin-top:18px;font-size:11px;color:var(--text-sub);display:flex;justify-content:space-between;opacity:0.8;}
     .footer-left{display:flex;align-items:center;}
-    .status-dot{width:8px;height:8px;border-radius:999px;background:#00c853;box-shadow:0 0 8px rgba(0,200,83,0.9);margin-right:6px;}
+    .status-dot{width:8px;height:8px;border-radius:999px;margin-right:6px;transition:background 0.4s,box-shadow 0.4s;}
+    .status-dot.connected{background:#00c853;box-shadow:0 0 8px rgba(0,200,83,0.9);}
+    .status-dot.disconnected{background:#ef5350;box-shadow:0 0 8px rgba(239,83,80,0.6);}
+    .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:#0c111a;border-radius:20px;padding:10px 18px;color:white;opacity:0;transition:opacity 0.2s,transform 0.2s;pointer-events:none;display:flex;align-items:center;gap:8px;box-shadow:var(--shadow-soft);z-index:100;}
+    .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+    .toast-dot{width:6px;height:6px;border-radius:999px;}
+    .ha-status-row{display:flex;align-items:center;justify-content:space-between;margin-top:8px;position:relative;z-index:1;}
+    .ha-status-pill{font-size:10px;display:flex;align-items:center;gap:5px;padding:4px 8px;border-radius:999px;background:rgba(0,0,0,0.3);}
+    .ha-status-dot{width:6px;height:6px;border-radius:999px;flex-shrink:0;}
+    .ha-status-dot.synced{background:#00c853;box-shadow:0 0 5px rgba(0,200,83,0.8);}
+    .ha-status-dot.unsynced{background:#ffb300;box-shadow:0 0 5px rgba(255,179,0,0.6);}
+    .ha-status-dot.error{background:#ef5350;box-shadow:0 0 5px rgba(239,83,80,0.6);}
+    .ha-status-dot.idle{background:#3f4b5f;}
+    .save-automation-btn{width:100%;padding:10px;border:none;border-radius:var(--radius-md);background:linear-gradient(135deg,#1e88ff,#0f4c81);color:white;font-size:13px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;cursor:pointer;margin-top:10px;box-shadow:0 6px 16px rgba(0,0,0,0.5);}
   </style>
 </head>
 <body>
@@ -135,8 +166,13 @@
     </div>
   </div>
 
+  <div class="toast" id="toast"><div class="toast-dot" id="toast-dot"></div><span id="toast-text">Saved</span></div>
+
   <footer class="footer">
-    <div class="footer-left"><span class="status-dot"></span><span>Connected to Home Assistant</span></div>
+    <div class="footer-left">
+      <span class="status-dot disconnected" id="conn-dot"></span>
+      <span id="conn-label">Connecting…</span>
+    </div>
     <span id="last-sync">—</span>
   </footer>
 </div>
@@ -144,19 +180,42 @@
 <script>
   /* ── STATE ─────────────────────────────── */
   let SWITCHES      = [];   // loaded from /api/switches
-  let SENSORS       = [];   // loaded from /api/settings
-  const swState     = JSON.parse(localStorage.getItem("swState") || "{}");
-  const live        = {};
+  let SENSORS       = [];   // loaded from /api/sensors/all (numeric + level)
+  const swState     = {};   // seeded from server on load — no localStorage
+  const live        = {};   // entity_id → current value/state
 
   /* ── LOAD CONFIG ───────────────────────── */
+  function updateConnStatus(cfg) {
+    const dot   = document.getElementById("conn-dot");
+    const label = document.getElementById("conn-label");
+    if (!dot || !label) return;
+    if (cfg?.connected) {
+      dot.className     = "status-dot connected";
+      label.textContent = "Connected to Home Assistant";
+    } else {
+      dot.className     = "status-dot disconnected";
+      label.textContent = cfg?.host ? "Disconnected — retrying…" : "Not configured";
+    }
+  }
+
   async function loadConfig() {
     try {
-      const [swData, settings] = await Promise.all([
-        fetch("/api/switches").then(r => r.json()),
-        fetch("/api/settings").then(r => r.json()),
+      // Fetch all three independently so one failure doesn't kill the others
+      const [swResp, sensResp, cfgResp] = await Promise.all([
+        fetch("/api/switches"),
+        fetch("/api/sensors/all"),
+        fetch("/api/config"),
       ]);
 
-      // Build SWITCHES from backend (these have names/entities from settings)
+      // Update connection status from config endpoint
+      if (cfgResp.ok) updateConnStatus(await cfgResp.json());
+
+      if (!swResp.ok) throw new Error(`/api/switches returned ${swResp.status}`);
+      const swData = await swResp.json();
+
+      // Sensors are non-fatal — degrade gracefully if endpoint missing
+      SENSORS = sensResp.ok ? await sensResp.json() : [];
+
       SWITCHES = swData.map(sw => ({
         id:     sw.id,
         name:   sw.name   || `Switch ${sw.id}`,
@@ -166,37 +225,60 @@
         watts:  sw.watts  || 0,
       }));
 
-      // Build sensor list from settings for sensor-mode dropdowns
-      const sens = settings?.sensors || {};
-      SENSORS = Object.entries(sens).map(([key, cfg]) => {
-        const labels = { temperature:"Temperature", ph:"pH", orp:"ORP", kh:"KH" };
-        const units  = { temperature:"°C", ph:"", orp:"mV", kh:"dKH" };
-        return { value: cfg.primary || "", label: labels[key] || key, unit: units[key] || "" };
-      }).filter(s => s.value);
-
-      // Initialise state for any new switches not yet in localStorage
+      // Seed swState from server-saved automation config (works across all devices)
       SWITCHES.forEach(sw => {
-        if (!swState[sw.id]) swState[sw.id] = {
-          on: false, mode:"manual",
-          schedule:{ onAt:"08:00", offAt:"22:00" },
-          sensor:{ entity: SENSORS[0]?.value || "", triggerType:"low", setpoint:26, variance:1 },
-        };
-        // Sync state from HA if available
-        if (swData.find(s=>s.id===sw.id)?.state === "on") swState[sw.id].on = true;
-        if (swData.find(s=>s.id===sw.id)?.state === "off") swState[sw.id].on = false;
+        const haEntry = swData.find(s => s.id === sw.id);
+        const saved   = haEntry?.automation || null;
+
+        // Build sub-objects by merging defaults with any saved values — no duplicate keys
+        const schedule    = Object.assign({ onAt: "08:00", offAt: "22:00" },               saved?.schedule    || {});
+        const sensor      = Object.assign({ entity: "", triggerType: "low", setpoint: 26, variance: 1 }, saved?.sensor || {});
+        const levelSensor = Object.assign({ mode: "single", entity1: "", entity2: "" },    saved?.levelSensor || {});
+
+        swState[sw.id] = Object.assign(
+          { on: false, mode: "manual" },
+          saved || {},
+          { schedule, sensor, levelSensor }   // always use the fully-merged sub-objects
+        );
+
+        // Always sync on/off from live HA state — it is the source of truth
+        if (haEntry?.state === "on")  swState[sw.id].on = true;
+        if (haEntry?.state === "off") swState[sw.id].on = false;
       });
 
       renderAll();
+
+      // After cards are rendered, check HA automation status for each switch
+      if (SWITCHES.length) {
+        SWITCHES.forEach(sw => {
+          // If this switch has a saved automation mode (not manual), show unsynced
+          // until user explicitly pushes — we can't verify HA state without extra call
+          const s = swState[sw.id];
+          if (s && s.mode && s.mode !== "manual") {
+            setHAStatus(sw.id, "unsynced", "Config loaded — press Save Automation to verify HA sync");
+          }
+        });
+      }
     } catch (e) {
       console.error("Failed to load switch config:", e);
       document.getElementById("switch-container").innerHTML =
-        `<div class="empty-msg">Configure switches in <a href="settings.html" style="color:var(--accent)">Settings →</a></div>`;
+        `<div class="empty-msg">Could not load switches — check the server console. <a href="settings.html" style="color:var(--accent)">Settings →</a></div>`;
     }
   }
 
   function iconBgFor(icon) {
     const map = { "🔥":"linear-gradient(135deg,#ef5350,#d32f2f)", "🫧":"linear-gradient(135deg,#1e88ff,#0b47a1)", "☀️":"linear-gradient(135deg,#a855f7,#7c3aed)", "💧":"linear-gradient(135deg,#4db6ac,#00897b)", "⏻":"linear-gradient(135deg,#3f4b5f,#2a3448)" };
     return map[icon] || "linear-gradient(135deg,#3f4b5f,#2a3448)";
+  }
+
+  /* ── SENSOR SELECT HELPERS ──────────────── */
+  function numericSensors() { return SENSORS.filter(s => s.type === "numeric"); }
+  function levelSensorsList() { return SENSORS.filter(s => s.type === "level"); }
+
+  function buildSensorSelect(selectId, sensors, current, placeholder="— Select sensor —") {
+    if (!sensors.length) return `<select id="${selectId}"><option value="">No sensors configured</option></select>`;
+    const opts = sensors.map(s => `<option value="${s.value}" ${s.value===current?"selected":""}>${s.label}${s.unit?" ("+s.unit+")":""}</option>`).join("");
+    return `<select id="${selectId}"><option value="">${placeholder}</option>${opts}</select>`;
   }
 
   /* ── RENDER ────────────────────────────── */
@@ -212,10 +294,16 @@
   }
 
   function buildCard(sw) {
-    const s   = swState[sw.id];
+    const s = swState[sw.id];
+    const ls = s.levelSensor;
+    const numSens = numericSensors();
+    const lvlSens = levelSensorsList();
+    const isAutoMode = s.mode === "sensor" || s.mode === "level";
+
     const div = document.createElement("div");
-    div.className = `switch-card${s.on?" on":""}${s.mode==="sensor"?" sensor-controlled":""}`;
+    div.className = `switch-card${s.on?" on":""}${s.mode==="sensor"?" sensor-controlled":""}${s.mode==="level"?" level-controlled":""}`;
     div.id = `sw${sw.id}-card`;
+
     div.innerHTML = `
       <div class="switch-row">
         <div class="switch-left">
@@ -228,7 +316,7 @@
             <div class="switch-sub">${sw.entity}</div>
           </div>
         </div>
-        <label class="big-toggle${s.mode==="sensor"?" disabled":""}" id="sw${sw.id}-toggle">
+        <label class="big-toggle${isAutoMode?" disabled":""}" id="sw${sw.id}-toggle">
           <input type="checkbox" ${s.on?"checked":""} onchange="manualToggle(${sw.id},this.checked)">
           <div class="big-toggle-track"></div>
           <div class="big-toggle-thumb"></div>
@@ -245,11 +333,14 @@
         <button class="mode-tab${s.mode==="manual"?" active-manual":""}"   onclick="setMode(${sw.id},'manual')">Manual</button>
         <button class="mode-tab${s.mode==="schedule"?" active-schedule":""}" onclick="setMode(${sw.id},'schedule')">Schedule</button>
         <button class="mode-tab${s.mode==="sensor"?" active-sensor":""}"   onclick="setMode(${sw.id},'sensor')">Sensor</button>
+        <button class="mode-tab${s.mode==="level"?" active-level":""}"     onclick="setMode(${sw.id},'level')">Level</button>
       </div>
+
       <!-- MANUAL -->
       <div class="auto-panel${s.mode==="manual"?" visible":""}" id="sw${sw.id}-panel-manual">
         <div class="manual-hint">Controlled manually via the toggle above.</div>
       </div>
+
       <!-- SCHEDULE -->
       <div class="auto-panel${s.mode==="schedule"?" visible":""}" id="sw${sw.id}-panel-schedule">
         <div class="time-row">
@@ -257,14 +348,13 @@
           <div class="time-field"><span class="field-label">Off At</span><input type="time" id="sw${sw.id}-off-at" value="${s.schedule.offAt}" onchange="saveSchedule(${sw.id})"></div>
         </div>
       </div>
-      <!-- SENSOR -->
+
+      <!-- NUMERIC SENSOR -->
       <div class="auto-panel${s.mode==="sensor"?" visible":""}" id="sw${sw.id}-panel-sensor">
         <div class="sensor-panel-grid">
           <div class="sensor-select-row">
             <span class="field-label">Sensor</span>
-            <select id="sw${sw.id}-sensor-entity" onchange="updateSensorCfg(${sw.id})">
-              ${SENSORS.length ? SENSORS.map(sen=>`<option value="${sen.value}"${s.sensor.entity===sen.value?" selected":""}>${sen.label}${sen.unit?" ("+sen.unit+")":""}</option>`).join("") : `<option value="">No sensors configured in Settings</option>`}
-            </select>
+            ${buildSensorSelect(`sw${sw.id}-sensor-entity`, numSens, s.sensor.entity)}
           </div>
           <div>
             <span class="field-label" style="display:block;margin-bottom:6px;">Trigger Type</span>
@@ -291,29 +381,93 @@
           </div>
         </div>
       </div>
+
+      <!-- LEVEL SENSOR -->
+      <div class="auto-panel${s.mode==="level"?" visible":""}" id="sw${sw.id}-panel-level">
+        <div class="level-panel-grid">
+          <div>
+            <span class="field-label" style="display:block;margin-bottom:6px;">Sensor Mode</span>
+            <div class="level-type-row">
+              <button class="level-type-btn${(ls.mode||"single")==="single"?" active-single":""}" id="sw${sw.id}-lvlmode-single" onclick="setLevelMode(${sw.id},'single')">
+                <span class="lico">💧</span><span>Single</span>
+              </button>
+              <button class="level-type-btn${(ls.mode||"single")==="dual"?" active-dual":""}" id="sw${sw.id}-lvlmode-dual" onclick="setLevelMode(${sw.id},'dual')">
+                <span class="lico">💧💧</span><span>Dual</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Single sensor panel -->
+          <div id="sw${sw.id}-lvl-single-panel" style="display:${(ls.mode||"single")==="single"?"block":"none"}">
+            <span class="field-label" style="display:block;margin-bottom:6px;">Binary Sensor</span>
+            ${buildSensorSelect(`sw${sw.id}-lvl-entity1`, lvlSens, ls.entity1)}
+          </div>
+
+          <!-- Dual sensor panel -->
+          <div id="sw${sw.id}-lvl-dual-panel" style="display:${(ls.mode||"single")==="dual"?"block":"none"}">
+            <span class="field-label" style="display:block;margin-bottom:6px;">Sensor 1</span>
+            ${buildSensorSelect(`sw${sw.id}-lvl-entity1-dual`, lvlSens, ls.entity1)}
+            <span class="field-label" style="display:block;margin:8px 0 6px;">Sensor 2</span>
+            ${buildSensorSelect(`sw${sw.id}-lvl-entity2`, lvlSens, ls.entity2)}
+          </div>
+
+          <!-- Live state badges -->
+          <div class="level-live-row" id="sw${sw.id}-lvl-live-row"></div>
+          <div style="display:flex;justify-content:flex-end;">
+            <div class="auto-status-pill pill-waiting" id="sw${sw.id}-lvl-pill">Waiting</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SAVE BUTTON + HA STATUS -->
+      <div style="position:relative;z-index:1;margin-top:4px;">
+        <button class="save-automation-btn" onclick="saveAutomation(${sw.id})">💾 Save Automation</button>
+        <div class="ha-status-row">
+          <div class="ha-status-pill">
+            <div class="ha-status-dot idle" id="sw${sw.id}-ha-dot"></div>
+            <span id="sw${sw.id}-ha-lbl" style="color:var(--text-sub);font-size:10px;">Not yet pushed to HA</span>
+          </div>
+          <span style="font-size:10px;color:var(--accent-muted)">slug: aquarium_${sw.slug}</span>
+        </div>
+      </div>
     `;
+
     if (s.mode === "sensor") setTimeout(() => { renderHyst(sw.id); updateLive(sw.id); }, 0);
+    if (s.mode === "level")  setTimeout(() => { updateLevelLive(sw.id); }, 0);
+
+    // Attach change listeners for level sensor selects
+    div.querySelector(`#sw${sw.id}-lvl-entity1`)?.addEventListener("change", () => saveLevelCfg(sw.id));
+    div.querySelector(`#sw${sw.id}-lvl-entity1-dual`)?.addEventListener("change", () => saveLevelCfg(sw.id));
+    div.querySelector(`#sw${sw.id}-lvl-entity2`)?.addEventListener("change", () => saveLevelCfg(sw.id));
+    div.querySelector(`#sw${sw.id}-sensor-entity`)?.addEventListener("change", () => updateSensorCfg(sw.id));
+
     return div;
   }
 
   /* ── HELPERS ────────────────────────────── */
-  function modeLabel(m) { return {manual:"Manual",schedule:"Schedule",sensor:"Auto"}[m]||m; }
+  function modeLabel(m) { return {manual:"Manual",schedule:"Schedule",sensor:"Sensor",level:"Level"}[m]||m; }
 
   function setMode(id, mode) {
     swState[id].mode = mode;
     const card = document.getElementById(`sw${id}-card`);
-    card.querySelectorAll(".mode-tab").forEach((t,i)=>{ t.className=`mode-tab${mode===["manual","schedule","sensor"][i]?" active-"+["manual","schedule","sensor"][i]:""}` });
-    ["manual","schedule","sensor"].forEach(m=>{ document.getElementById(`sw${id}-panel-${m}`)?.classList.toggle("visible",m===mode); });
-    document.getElementById(`sw${id}-toggle`)?.classList.toggle("disabled", mode==="sensor");
+    const modes = ["manual","schedule","sensor","level"];
+    card.querySelectorAll(".mode-tab").forEach((t,i) => {
+      t.className = `mode-tab${mode===modes[i]?" active-"+modes[i]:""}`;
+    });
+    modes.forEach(m => { document.getElementById(`sw${id}-panel-${m}`)?.classList.toggle("visible", m===mode); });
+    const isAuto = mode==="sensor" || mode==="level";
+    document.getElementById(`sw${id}-toggle`)?.classList.toggle("disabled", isAuto);
     card.classList.toggle("sensor-controlled", mode==="sensor");
+    card.classList.toggle("level-controlled",  mode==="level");
     document.getElementById(`sw${id}-mstat`).textContent = modeLabel(mode);
     if (mode==="sensor") { renderHyst(id); updateLive(id); }
-    saveState(); postConfig(id);
+    if (mode==="level")  { updateLevelLive(id); }
+    postConfig(id);
   }
 
   function manualToggle(id, on) {
-    if (swState[id].mode==="sensor") return;
-    swState[id].on = on; applyState(id, on); saveState();
+    if (swState[id].mode==="sensor" || swState[id].mode==="level") return;
+    swState[id].on = on; applyState(id, on);
     fetch(`/api/switches/toggle?switch=${id}&state=${on?"on":"off"}`,{method:"POST"});
   }
 
@@ -332,7 +486,7 @@
 
   function saveSchedule(id) {
     swState[id].schedule = { onAt:document.getElementById(`sw${id}-on-at`)?.value, offAt:document.getElementById(`sw${id}-off-at`)?.value };
-    saveState(); postConfig(id);
+    postConfig(id);
   }
 
   function setTrigger(id, type) {
@@ -340,15 +494,105 @@
     const card = document.getElementById(`sw${id}-card`);
     card.querySelector(`#sw${id}-trig-low`).className  = `trigger-btn${type==="low"?" active-low":""}`;
     card.querySelector(`#sw${id}-trig-high`).className = `trigger-btn${type==="high"?" active-high":""}`;
-    renderHyst(id); saveState(); postConfig(id);
+    renderHyst(id); postConfig(id);
   }
 
   function updateSensorCfg(id) {
     const s = swState[id].sensor;
-    s.entity   = document.getElementById(`sw${id}-sensor-entity`)?.value||s.entity;
-    s.setpoint = parseFloat(document.getElementById(`sw${id}-setpoint`)?.value)||0;
-    s.variance = parseFloat(document.getElementById(`sw${id}-variance`)?.value)||0;
-    renderHyst(id); updateLive(id); saveState(); postConfig(id);
+    s.entity   = document.getElementById(`sw${id}-sensor-entity`)?.value || s.entity;
+    s.setpoint = parseFloat(document.getElementById(`sw${id}-setpoint`)?.value) || 0;
+    s.variance = parseFloat(document.getElementById(`sw${id}-variance`)?.value) || 0;
+    renderHyst(id); updateLive(id); postConfig(id);
+  }
+
+  /* ── LEVEL SENSOR LOGIC ─────────────────── */
+  function setLevelMode(id, mode) {
+    swState[id].levelSensor.mode = mode;
+    const card = document.getElementById(`sw${id}-card`);
+    card.querySelector(`#sw${id}-lvlmode-single`).className = `level-type-btn${mode==="single"?" active-single":""}`;
+    card.querySelector(`#sw${id}-lvlmode-dual`).className   = `level-type-btn${mode==="dual"?" active-dual":""}`;
+    document.getElementById(`sw${id}-lvl-single-panel`).style.display = mode==="single"?"block":"none";
+    document.getElementById(`sw${id}-lvl-dual-panel`).style.display   = mode==="dual"?"block":"none";
+    saveLevelCfg(id);
+  }
+
+  function saveLevelCfg(id) {
+    const ls = swState[id].levelSensor;
+    const mode = ls.mode || "single";
+    if (mode === "single") {
+      ls.entity1 = document.getElementById(`sw${id}-lvl-entity1`)?.value || "";
+    } else {
+      ls.entity1 = document.getElementById(`sw${id}-lvl-entity1-dual`)?.value || "";
+      ls.entity2 = document.getElementById(`sw${id}-lvl-entity2`)?.value || "";
+    }
+    updateLevelLive(id); postConfig(id);
+  }
+
+  function isEntityActive(entity) {
+    const state = live[entity];
+    if (state === undefined || state === null) return null;
+    const s = String(state).toLowerCase();
+    return s === "on" || s === "true" || s === "1" || s === "active" || s === "open" || s === "detected";
+  }
+
+  function updateLevelLive(id) {
+    const ls = swState[id].levelSensor;
+    const liveRow = document.getElementById(`sw${id}-lvl-live-row`);
+    const pill    = document.getElementById(`sw${id}-lvl-pill`);
+    if (!liveRow || !pill) return;
+
+    const mode = ls.mode || "single";
+    const entities = mode === "single"
+      ? [ls.entity1].filter(Boolean)
+      : [ls.entity1, ls.entity2].filter(Boolean);
+
+    // Build live badges
+    liveRow.innerHTML = entities.map((eid, i) => {
+      const state   = live[eid];
+      const active  = isEntityActive(eid);
+      const dotCls  = active === null ? "state-unknown" : active ? "state-on" : "state-off";
+      const label   = SENSORS.find(s=>s.value===eid)?.label || eid;
+      const display = state !== undefined ? String(state).toUpperCase() : "—";
+      return `
+        <div class="level-sensor-badge">
+          <div class="level-sensor-dot ${dotCls}"></div>
+          <div>
+            <div class="level-sensor-val">${display}</div>
+            <div class="level-sensor-lbl">${label}</div>
+          </div>
+        </div>`;
+    }).join("");
+
+    // Determine next switch state
+    let next = swState[id].on;
+    if (mode === "single" && ls.entity1) {
+      const active = isEntityActive(ls.entity1);
+      if (active !== null) next = active;
+    } else if (mode === "dual" && ls.entity1 && ls.entity2) {
+      const a1 = isEntityActive(ls.entity1);
+      const a2 = isEntityActive(ls.entity2);
+      if (a1 !== null && a2 !== null) {
+        if (!a1 && !a2) next = true;   // both LOW → ON
+        if (a1 && a2)   next = false;  // both HIGH → OFF
+        // mixed state: maintain current
+      }
+    }
+
+    // Apply if changed
+    if (swState[id].mode === "level" && next !== swState[id].on) {
+      swState[id].on = next;
+      applyState(id, next);
+      fetch(`/api/switches/toggle?switch=${id}&state=${next?"on":"off"}`,{method:"POST"});
+    }
+
+    // Update pill
+    if (!entities.length) {
+      pill.textContent = "No Sensor"; pill.className = "auto-status-pill pill-waiting";
+    } else if (swState[id].on) {
+      pill.textContent = "Active"; pill.className = "auto-status-pill pill-triggered";
+    } else {
+      pill.textContent = "Inactive"; pill.className = "auto-status-pill pill-waiting";
+    }
   }
 
   function renderHyst(id) {
@@ -397,8 +641,7 @@
   }
 
   function setAll(on) {
-    SWITCHES.forEach(sw=>{ if(swState[sw.id].mode!=="sensor"){ swState[sw.id].on=on; applyState(sw.id,on); fetch(`/api/switches/toggle?switch=${sw.id}&state=${on?"on":"off"}`,{method:"POST"}); } });
-    saveState();
+    SWITCHES.forEach(sw=>{ if(swState[sw.id].mode!=="sensor"&&swState[sw.id].mode!=="level"){ swState[sw.id].on=on; applyState(sw.id,on); fetch(`/api/switches/toggle?switch=${sw.id}&state=${on?"on":"off"}`,{method:"POST"}); postConfig(sw.id); } });
   }
 
   function updateSummary() {
@@ -410,52 +653,153 @@
     document.getElementById("est-month").textContent=`$${monthly}`;
   }
 
-  function saveState() { localStorage.setItem("swState",JSON.stringify(swState)); }
+  // saveState() removed — swState is persisted to the server via postConfig()
 
   function postConfig(id) {
-    fetch("/api/switches/config",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,config:swState[id]})}).catch(()=>{});
+    // Silent background save — no toast, no HA push (that's explicit via saveAutomation)
+    fetch("/api/switches/config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, config: swState[id] }),
+    }).catch(() => {});
+    // Mark HA status as unsynced since config changed without a push
+    setHAStatus(id, "unsynced", "Config changed — press Save Automation to push to HA");
+  }
+
+  // Flush live DOM values into swState for a given switch id
+  function flushStateFromDOM(id) {
+    const s = swState[id];
+    if (!s) return;
+    if (s.mode === "schedule") {
+      s.schedule.onAt  = document.getElementById(`sw${id}-on-at`)?.value  || s.schedule.onAt;
+      s.schedule.offAt = document.getElementById(`sw${id}-off-at`)?.value || s.schedule.offAt;
+    }
+    if (s.mode === "sensor") {
+      s.sensor.entity   = document.getElementById(`sw${id}-sensor-entity`)?.value || s.sensor.entity;
+      s.sensor.setpoint = parseFloat(document.getElementById(`sw${id}-setpoint`)?.value) || s.sensor.setpoint;
+      s.sensor.variance = parseFloat(document.getElementById(`sw${id}-variance`)?.value) || s.sensor.variance;
+    }
+    if (s.mode === "level") {
+      const ls   = s.levelSensor;
+      const lmode = ls.mode || "single";
+      if (lmode === "single") {
+        ls.entity1 = document.getElementById(`sw${id}-lvl-entity1`)?.value || ls.entity1;
+      } else {
+        ls.entity1 = document.getElementById(`sw${id}-lvl-entity1-dual`)?.value || ls.entity1;
+        ls.entity2 = document.getElementById(`sw${id}-lvl-entity2`)?.value       || ls.entity2;
+      }
+    }
+  }
+
+  function setHAStatus(id, state, msg) {
+    const dot = document.getElementById(`sw${id}-ha-dot`);
+    const lbl = document.getElementById(`sw${id}-ha-lbl`);
+    if (dot) dot.className = `ha-status-dot ${state}`;
+    if (lbl) lbl.textContent = msg;
+  }
+
+  async function saveAutomation(id) {
+    // 1. Flush DOM → swState
+    flushStateFromDOM(id);
+
+    // 2. Save to server settings.json
+    try {
+      await fetch("/api/switches/config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, config: swState[id] }),
+      });
+    } catch(e) {
+      showToast("Failed to save locally", true);
+      return;
+    }
+
+    // 3. Push to HA (helpers + automations)
+    setHAStatus(id, "unsynced", "Pushing to HA…");
+    try {
+      const r = await fetch("/api/switches/ha-automation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      }).then(r => r.json());
+
+      if (r.ok) {
+        setHAStatus(id, "synced", `✓ Synced to HA — automations active`);
+        showToast("Automation saved & pushed to HA ✓");
+      } else if (r.error === "HA not connected") {
+        setHAStatus(id, "unsynced", "Saved locally — HA not connected, push when connected");
+        showToast("Saved locally. Connect to HA to push automation.", false);
+      } else {
+        setHAStatus(id, "error", `HA error: ${r.error || "unknown"}`);
+        showToast("HA push failed: " + (r.error || "unknown"), true);
+      }
+    } catch(e) {
+      setHAStatus(id, "unsynced", "Saved locally — could not reach server");
+      showToast("Saved locally. Server unreachable for HA push.", false);
+    }
+  }
+
+  function showToast(msg, isError = false) {
+    const t   = document.getElementById("toast");
+    const dot = document.getElementById("toast-dot");
+    document.getElementById("toast-text").textContent = msg;
+    dot.style.background = isError ? "#ef5350" : "#00c853";
+    t.classList.add("show");
+    setTimeout(() => t.classList.remove("show"), 2500);
   }
 
   /* ── LIVE POLL ──────────────────────────── */
   async function pollSensors() {
     try {
-      const [sData, swData] = await Promise.all([
+      const [sData, swData, lvlData] = await Promise.all([
         fetch("/api/sensors").then(r=>r.json()),
         fetch("/api/switches").then(r=>r.json()),
+        fetch("/api/binary-sensors").then(r=>r.json()),
       ]);
-      // Update live sensor values
-      SENSORS.forEach(sen => {
-        const key = Object.entries({temperature:"temp",ph:"ph",orp:"orp",kh:"kh"}).find(([k,v])=>{ const s=sData[k]; return s?.entity===sen.value||sData[v]!==undefined; });
-        // Try to get value from the sensor entity's state
-        if (sData[sen.value] !== undefined) live[sen.value] = parseFloat(sData[sen.value]);
-      });
-      // Also store legacy
-      Object.entries({temperature:"temp",ph:"ph",orp:"orp",kh:"kh"}).forEach(([key,flat])=>{
+
+      // Numeric sensor live values — built-in groups
+      ["temperature","ph","orp","kh"].forEach(key => {
         const eid = sData[key]?.entity;
-        if (eid && sData[key]?.value!==null) live[eid] = parseFloat(sData[key]?.value);
+        if (eid && sData[key]?.value !== null) live[eid] = parseFloat(sData[key]?.value);
       });
+      // Custom numeric sensors
+      if (Array.isArray(sData.custom)) {
+        sData.custom.forEach(c => { if (c.entity && c.value !== null) live[c.entity] = c.value; });
+      }
+
+      // Binary sensor states (invert already applied server-side)
+      lvlData.forEach(ls => { if (ls.entity) live[ls.entity] = ls.state; });
 
       // Sync switch states from HA
       swData.forEach(sw => {
         if (sw.state === "on" || sw.state === "off") {
           const newOn = sw.state === "on";
-          if (swState[sw.id] && swState[sw.id].mode !== "sensor" && swState[sw.id].on !== newOn) {
+          if (swState[sw.id] && swState[sw.id].mode === "manual" && swState[sw.id].on !== newOn) {
             swState[sw.id].on = newOn; applyState(sw.id, newOn);
           }
         }
       });
 
-      SWITCHES.forEach(sw=>{ if(swState[sw.id].mode==="sensor") updateLive(sw.id); });
+      SWITCHES.forEach(sw => {
+        if (swState[sw.id].mode === "sensor") updateLive(sw.id);
+        if (swState[sw.id].mode === "level")  updateLevelLive(sw.id);
+      });
+
+      // Refresh connection status on every poll
+      fetch("/api/config").then(r => r.ok ? r.json() : null).then(cfg => { if (cfg) updateConnStatus(cfg); }).catch(()=>{});
+
       const now=new Date();
       const el=document.getElementById("last-sync");
       if(el) el.textContent=`Last sync: ${now.getHours()}:${String(now.getMinutes()).padStart(2,"0")}`;
-    } catch(e){}
+    } catch(e){
+      updateConnStatus(null);
+    }
   }
 
   /* ── INIT ───────────────────────────────── */
   loadConfig();
   setInterval(pollSensors, 10000);
-  setTimeout(pollSensors, 2000); // first poll after config loads
+  setTimeout(pollSensors, 2000);
 </script>
 </body>
 </html>

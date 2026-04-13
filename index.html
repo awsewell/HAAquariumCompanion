@@ -24,7 +24,7 @@
     .header-title span { font-size: 11px; color: var(--text-sub); text-transform: uppercase; letter-spacing: 0.18em; }
     .header-gear { width: 32px; height: 32px; border-radius: 999px; background: linear-gradient(135deg, #182233, #0b101a); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 10px rgba(0,0,0,0.7); color: var(--text-sub); font-size: 18px; }
 
-    .sensor-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 22px; }
+    .sensor-grid { display: grid; grid-template-columns: calc(50% - 6px) calc(50% - 6px); gap: 12px; margin-bottom: 22px; }
     .sensor-card { background: radial-gradient(circle at top left, #1b2436 0, #0c111a 55%, #05070b 100%); border-radius: var(--radius-lg); padding: 12px 12px 14px; box-shadow: var(--shadow-soft); position: relative; overflow: hidden; }
     .sensor-card::before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at top right, rgba(79,211,255,0.18), transparent 55%); opacity: 0.9; pointer-events: none; }
     .sensor-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; position: relative; z-index: 1; }
@@ -58,7 +58,7 @@
     .status-dot.connected    { background: #00c853; box-shadow: 0 0 8px rgba(0,200,83,0.9); }
     .status-dot.disconnected { background: #ef5350; box-shadow: 0 0 8px rgba(239,83,80,0.6); }
 
-    @media (max-width: 360px) { .sensor-grid { grid-template-columns: 1fr; } }
+    /* 2-column grid forced for all screen sizes including Android WebView */
   </style>
 </head>
 <body>
@@ -98,6 +98,10 @@
       <div class="nav-left"><div class="nav-icon switches">⏻</div><span class="nav-label">Switches</span></div>
       <span class="nav-chevron">›</span>
     </a>
+    <a href="binary-sensors.html" class="nav-button">
+      <div class="nav-left"><div class="nav-icon" style="background:linear-gradient(135deg,#00acc1,#006064)">💧</div><span class="nav-label">Binary Sensors</span></div>
+      <span class="nav-chevron">›</span>
+    </a>
   </nav>
 
   <footer class="footer">
@@ -117,6 +121,14 @@
     { key:"kh",          label:"KH",    icon:"💧", cls:"kh",   unitSuffix:"",   unitLabel:"dKH"     },
   ];
 
+  function formatVal(val, decimals) {
+    if (val === null || val === undefined) return "—";
+    const num = parseFloat(val);
+    if (isNaN(num)) return val;
+    if (decimals === 0 || decimals === 1 || decimals === 2) return num.toFixed(decimals);
+    return String(val);
+  }
+
   function renderGrid(sensorData) {
     const grid = document.getElementById("sensor-grid");
     grid.innerHTML = "";
@@ -126,7 +138,8 @@
       const group = sensorData[def.key];
       if (!group || group.active === false) return;
       const val = group.value !== null && group.value !== undefined ? group.value : null;
-      const display = val !== null ? `${val}${def.unitSuffix}` : "—";
+      const decimals = group.decimals;
+      const display = val !== null ? `${formatVal(val, decimals)}${def.unitSuffix}` : "—";
       grid.innerHTML += `
         <article class="sensor-card">
           <div class="sensor-header">
@@ -142,7 +155,8 @@
     const custom = Array.isArray(sensorData.custom) ? sensorData.custom : [];
     custom.forEach(s => {
       if (!s.showOnHome) return;
-      const val = s.value !== null && s.value !== undefined ? s.value : "—";
+      const raw = s.value !== null && s.value !== undefined ? s.value : null;
+      const val = raw !== null ? formatVal(raw, s.decimals) : "—";
       const unit = s.unit === "custom" ? s.customUnit : (s.unit === "none" ? "" : s.unit);
       grid.innerHTML += `
         <article class="sensor-card">
